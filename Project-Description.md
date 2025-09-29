@@ -8,7 +8,8 @@
 An attendance verification app that confirms student presence in a class room by using location and other factors 
 
 #### Faculty Advisor:
-TBD
+Elizabeth Pawley
 
 #### Repository Link:
 https://github.com/Mutazz-Z/SeniorDesign
+
