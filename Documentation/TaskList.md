@@ -9,6 +9,9 @@
 - Design Web Dashboard Screen
 - Design Web Classes Screen
 - Design Web Profile Screen
+- Implement Front End for Admin Web App
+- Create Demo Data to Visulalize Login
+- Finalize and Verify Finished Applications
 
 #### Dominic:
 - Investigate Setting up mobile and web applications in flutter
@@ -19,3 +22,6 @@
 - Design Mobile Home Screen
 - Design Mobile Schedule Screen
 - Investigate Firebase Authentication
+- Implement Front End for Student Mobile App
+- Implement Firebase Authentication
+- Finalize and Verify Finished Applications
