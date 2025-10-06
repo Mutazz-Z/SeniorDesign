@@ -5,7 +5,7 @@
 | Investigate Creating Requirements for Web App | Milestone 2 | October 2025 | October 2025 |
 | Investigate Creating Requirements for Mobile App | Milestone 2 | October 2025 | October 2025 |
 | Investigate Firebase Authentication | Milestone 3 | October 2025 | October 2025 |
-| Design Common Widgets | Milestone 4 | October 2025 | October 2025|
+| Design Common Widgets | Milestone 4 | October 2025 | December 2025 |
 | Design Admin Widgets | Milestone 5 | October 2025 | December 2025 |
 | Design Student Widgets | Milestone 6 | October 2025 | December 2025 |
 | Design Mobile Welcome Screen| Milestone 7 | October 2025 | December 2025 |
