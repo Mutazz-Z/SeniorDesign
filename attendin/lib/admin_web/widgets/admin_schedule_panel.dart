@@ -141,6 +141,7 @@ class _AdminSchedulePanelState extends State<AdminSchedulePanel> {
         _getSortedSessionsForDay(allAdminClasses, tomorrowWeekday);
 
     return Container(
+      height: double.infinity,
       decoration: BoxDecoration(
         color: colors.secondaryBackground,
         borderRadius: const BorderRadius.only(

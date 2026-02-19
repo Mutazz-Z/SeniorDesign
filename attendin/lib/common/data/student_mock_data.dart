@@ -45,3 +45,18 @@ final List<Map<DateTime, ClassInfo>> mockMissedDays = [
   {DateTime(2025, 6, 10): userClasses[1]}, // Calculus I missed
   {DateTime(2025, 7, 10): userClasses[1]}, // Calculus I missed
 ];
+
+// Mock Location Data
+// Student's current location (latitude, longitude)
+const double mockUserLatitude = 39.1272;
+const double mockUserLongitude = -84.5182;
+
+// Class location coordinates
+const Map<String, Map<String, double>> classLocations = {
+  'physics2': {'lat': 39.1272, 'lon': -84.5182}, // Braunstein 300 - IN LOCATION
+  'physics3': {'lat': 39.1250, 'lon': -84.5200}, // Braunstein 400 - OUT OF LOCATION
+  'calc1': {'lat': 39.1300, 'lon': -84.5100}, // Old Main 101 - OUT OF LOCATION
+};
+
+// Radius in meters to consider "in location"
+const double locationRadius = 100.0;
