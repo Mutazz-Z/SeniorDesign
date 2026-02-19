@@ -69,6 +69,31 @@ class _AddClassScreenState extends State<AddClassScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: isStartTime ? _startTime : _endTime,
+      initialEntryMode: TimePickerEntryMode.input,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: AppColors.of(context).cardColor,
+              hourMinuteTextColor: AppColors.of(context).textColor,
+              dialHandColor: AppColors.of(context).accentTeal,
+              dialBackgroundColor: AppColors.of(context).secondaryBackground,
+              entryModeIconColor: AppColors.of(context).textColor,
+              helpTextStyle: AppTextStyles.plaintext(context),
+              hourMinuteColor: AppColors.of(context).secondaryBackground,
+              dayPeriodTextColor: AppColors.of(context).textColor,
+              dayPeriodColor: AppColors.of(context).errorRed,
+              cancelButtonStyle: ButtonStyle(
+                foregroundColor: WidgetStatePropertyAll(AppColors.of(context).textColor),
+              ),
+              confirmButtonStyle: ButtonStyle(
+                foregroundColor: WidgetStatePropertyAll(AppColors.of(context).textColor),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {

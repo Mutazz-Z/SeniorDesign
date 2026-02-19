@@ -146,7 +146,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final bool isSmall = widget.isSmallScreen || constraints.maxWidth < 975;
 
         return Scaffold(
-          backgroundColor: colors.primaryBackground,
+          backgroundColor: colors.primaryBlue,
           body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Container(
@@ -155,7 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 15,
                     offset: const Offset(0, 5),
                   ),
@@ -175,7 +175,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Dashboard',
                             style: AppTextStyles.screentitle(context).copyWith(
                                 fontSize: 32,
-                                color: colors.classesTextColorWeb),
+                                color: colors.primaryBlue),
                           ),
                           const SizedBox(height: 5),
                           Text('Overview of your current and upcoming classes',
