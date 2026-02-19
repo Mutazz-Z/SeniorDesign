@@ -1,0 +1,57 @@
+[ // Users
+  {
+    "uid": "user_sys_8f7d6s",
+    "schoolId": "001",
+    "name": "Alex Smith",
+    "email": "alex.smith@university.edu",
+    "role": "student",
+    "profilePicture": "https://link_to_image.com/pic.jpg"
+  },
+  {
+    "uid": "user_sys_9a8b7c",
+    "schoolId": "A01",
+    "name": "Dr. Sarah Jones",
+    "email": "s.jones@university.edu",
+    "role": "admin",
+    "profilePicture": ""
+  }
+]
+
+[ // Classes
+  {
+    "classId": "physics2_01",
+    "adminId": "user_sys_9a8b7c",
+    "name": "Physics II",
+    "location": "Baldwin Hall 304",
+
+    "start_time_minutes": 600, 
+    "end_time_minutes": 690,
+    
+    "is_mon": true,
+    "is_tue": false,
+    "is_wed": true,
+    "is_thu": false,
+    "is_fri": true,
+
+    "is_active": false,
+  }
+]
+
+[ // Enrollment
+  {
+    "enrollment_id": "enr_556677",
+    "class_id": "physics2",
+    "user_uid": "user_sys_8f7d6s",
+  }
+]
+
+[ // Attendance 
+    "attendance_id": "xxxxxx",
+  {
+    
+    "classId": "physics2",
+    "studenUid": "user_sys_8f7d6s",
+    "date": "2026-02-06",
+    "status": "present",
+  }
+]

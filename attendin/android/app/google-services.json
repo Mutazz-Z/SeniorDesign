@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "87105368480",
+    "project_id": "attendin-be3e2",
+    "storage_bucket": "attendin-be3e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87105368480:android:7f2f949307c34a09a4b4c5",
+        "android_client_info": {
+          "package_name": "com.example.attendin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBrjWBnkYA7iSPuHNUdt5r8I-mur72BPRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
