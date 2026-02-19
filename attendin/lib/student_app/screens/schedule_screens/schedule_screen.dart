@@ -2,6 +2,7 @@ import 'package:attendin/common/widgets/class_info_card.dart';
 import 'package:attendin/student_app/screens/schedule_screens/class_details_screen.dart';
 import 'package:attendin/common/utils/app_router.dart';
 import 'package:attendin/common/theme/app_colors.dart';
+import 'package:attendin/common/widgets/custom_refresh_indicator.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:attendin/student_app/widgets/custom_bottom_nav_bar.dart';
 import 'package:attendin/common/models/class_info.dart';
@@ -12,6 +13,7 @@ import 'package:attendin/common/data/class_data_provider.dart';
 import 'package:attendin/common/theme/theme_provider.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -48,9 +50,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     final enrollmentProvider = Provider.of<EnrollmentProvider>(context);
     final classProvider = Provider.of<ClassDataProvider>(context);
+    final AppColorScheme colors = AppColors.of(context);
+
+    final double topPadding = MediaQuery.of(context).padding.top;
 
     if (enrollmentProvider.loading || classProvider.loading) {
-      final AppColorScheme colors = AppColors.of(context);
       final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
       final bool isDarkMode;
       if (themeProvider.themeMode == ThemeMode.system) {
@@ -71,13 +75,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             children: [
               Flexible(
                 child: FractionallySizedBox(
-                  widthFactor: 0.5, // 50% of screen width
+                  widthFactor: 0.5,
                   child: AspectRatio(
-                    aspectRatio: 1, // Keep logo square
-                    child: Image.asset(
-                      logoPath,
-                      fit: BoxFit.contain,
-                    ),
+                    aspectRatio: 1,
+                    child: Image.asset(logoPath, fit: BoxFit.contain),
                   ),
                 ),
               ),
@@ -89,61 +90,53 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       );
     }
 
-    final List<ClassInfo> _scheduledClasses = classProvider.classes
+    final List<ClassInfo> scheduledClasses = classProvider.classes
         .where((cls) => enrollmentProvider.studentClassIds.contains(cls.id))
         .toList();
 
-    final AppColorScheme colors = AppColors.of(context);
     return PopScope(
       canPop: false,
       child: Scaffold(
         backgroundColor: colors.secondaryBackground,
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
-          title: Text(
-            'Schedule',
-            style: AppTextStyles.screentitle(context),
-          ),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: colors.primaryBlue,
-          automaticallyImplyLeading: false,
-        ),
-        // NEW: Wrapped body in RefreshIndicator
-        body: RefreshIndicator(
+        body: CustomRefreshIndicator(
           onRefresh: _handleRefresh,
-          child: _scheduledClasses.isEmpty
-              ? Center(
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Text(
-                      'No classes scheduled.',
-                      style: AppTextStyles.welcomeMessage(context),
-                    ),
+          child: ListView.builder(
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            padding: EdgeInsets.zero,
+            itemCount: scheduledClasses.length + 1,
+            itemBuilder: (context, index) {
+              // --- ITEM 0: THE HEADER ---
+              if (index == 0) {
+                return Container(
+                  padding: EdgeInsets.only(
+                      top: topPadding + 20, bottom: 20, left: 16, right: 16),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Schedule',
+                    style: AppTextStyles.screentitle(context),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0).copyWith(
-                      top: MediaQuery.of(context).padding.top +
-                          kToolbarHeight +
-                          16.0),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  itemCount: _scheduledClasses.length,
-                  itemBuilder: (context, index) {
-                    final classData = _scheduledClasses[index];
-                    return ClassInfoCard(
-                      classInfo: classData,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          customFadePageRoute(
-                            ClassDetailScreen(classInfo: classData),
-                          ),
-                        );
-                      },
+                );
+              }
+              final classData = scheduledClasses[index - 1];
+
+              return Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: ClassInfoCard(
+                  classInfo: classData,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      customFadePageRoute(
+                        ClassDetailScreen(classInfo: classData),
+                      ),
                     );
                   },
                 ),
+              );
+            },
+          ),
         ),
         bottomNavigationBar: CustomBottomNavBar(
           selectedIndex: _selectedIndex,

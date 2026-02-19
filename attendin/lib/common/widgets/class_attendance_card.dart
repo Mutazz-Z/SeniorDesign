@@ -2,6 +2,7 @@ import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:attendin/common/widgets/primary_button.dart';
+import 'package:attendin/common/utils/date_time_utils.dart';
 
 import 'package:flutter/material.dart';
 
@@ -9,20 +10,15 @@ class ClassCard extends StatelessWidget {
   final ClassInfo? currentClass;
   final AttendanceStatus? currentAttendanceStatus;
   final VoidCallback? onMarkAttendancePressed;
-  final String Function(List<int>) getDaysString;
-  final String Function(TimeOfDay) formatTimeOfDay;
   final bool showAttendanceActions;
   final VoidCallback? onInfoIconPressed;
-  final GlobalKey?
-      markAttendanceButtonKey;
+  final GlobalKey? markAttendanceButtonKey;
 
   const ClassCard({
     super.key,
     required this.currentClass,
     this.currentAttendanceStatus,
     this.onMarkAttendancePressed,
-    required this.getDaysString,
-    required this.formatTimeOfDay,
     this.showAttendanceActions = true,
     this.onInfoIconPressed,
     this.markAttendanceButtonKey,
@@ -62,7 +58,6 @@ class ClassCard extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Centered content
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
@@ -90,19 +85,20 @@ class ClassCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Info icon on the right
                     Positioned(
                       right: 0,
                       child: InkWell(
                         onTap: () {
-                          if (currentClass != null && onInfoIconPressed != null) {
+                          if (currentClass != null &&
+                              onInfoIconPressed != null) {
                             onInfoIconPressed!();
                           }
                         },
                         borderRadius: BorderRadius.circular(20),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          child: Icon(Icons.info_outline, color: colors.textColor),
+                          child:
+                              Icon(Icons.info_outline, color: colors.textColor),
                         ),
                       ),
                     ),
@@ -114,17 +110,15 @@ class ClassCard extends StatelessWidget {
                 children: [
                   Text(
                     currentClass!.subject,
-                    style: AppTextStyles.classTitle(context).copyWith(
-                      fontSize: 24,
-                    ),
+                    style: AppTextStyles.classTitle(context)
+                        .copyWith(fontSize: 24),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 5),
                   Text(
                     currentClass!.location,
-                    style: AppTextStyles.classLocation(context).copyWith(
-                      fontSize: 16,
-                    ),
+                    style: AppTextStyles.classLocation(context)
+                        .copyWith(fontSize: 16),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -143,7 +137,6 @@ class ClassCard extends StatelessWidget {
             _buildAttendanceContent(colors),
             const SizedBox(height: 15),
           ],
-          // Bottom section: Full-width date/time information
           if (currentClass != null)
             Container(
               width: double.infinity,
@@ -175,22 +168,18 @@ class ClassCard extends StatelessWidget {
   }
 
   Widget _buildAttendanceContent(AppColorScheme colors) {
-    if (currentAttendanceStatus == null) {
-      return const SizedBox.shrink();
-    }
+    if (currentAttendanceStatus == null) return const SizedBox.shrink();
 
     switch (currentAttendanceStatus!) {
       case AttendanceStatus.markAttendance:
-        final bool isButtonEnabled = currentClass != null;
         return SizedBox(
           height: 74.0,
           width: double.infinity,
           child: PrimaryButton(
-            key:
-                markAttendanceButtonKey,
+            key: markAttendanceButtonKey,
             label: 'Mark Attendance',
             backgroundColor: colors.primaryBlue,
-            onPressed: isButtonEnabled && onMarkAttendancePressed != null
+            onPressed: currentClass != null && onMarkAttendancePressed != null
                 ? onMarkAttendancePressed
                 : null,
           ),
@@ -202,7 +191,7 @@ class ClassCard extends StatelessWidget {
           child: PrimaryButton(
             label: 'Marking Attendance...',
             backgroundColor: colors.primaryBlue,
-            onPressed: null, // Disabled while marking
+            onPressed: null,
           ),
         );
       case AttendanceStatus.attended:
@@ -250,10 +239,7 @@ class ClassCard extends StatelessWidget {
           Text(
             message,
             style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+                color: color, fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ],
       ),
