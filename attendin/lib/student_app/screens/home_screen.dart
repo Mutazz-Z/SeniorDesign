@@ -219,25 +219,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _markAttendance() async {
     if (_currentClass == null) return;
+    
+    // Show "Marking Attendance..." state
+    setState(() {
+      _currentAttendanceStatus = AttendanceStatus.marking;
+    });
+
+    // Simulate getting location (add small delay to mimic real location fetch)
+    await Future.delayed(const Duration(milliseconds: 500));
+
     final userProvider = Provider.of<UserDataProvider>(context, listen: false);
     final attendanceProvider =
         Provider.of<AttendanceProvider>(context, listen: false);
 
-    // 2. Check Location (Keep your mock logic for now, later we add Geolocator)
+    // Check Location using mock data
     if (_isUserInLocation()) {
-      // 3. Optimistic UI Update (Show success immediately before DB finishes)
+      // User is in location - mark as attended
       setState(() {
         _currentAttendanceStatus = AttendanceStatus.attended;
       });
       _confettiController.play();
 
-      // 4. Prepare Data for Database
+      // Prepare Data for Database
       final now = DateTime.now();
       final dateString =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
       try {
-        // 5. Write to Firebase
+        // Write to Firebase
         await attendanceProvider.markPresent(
             _currentClass!.id, userProvider.uid, dateString);
         print("Attendance saved to database!");
@@ -250,9 +259,19 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } else {
+      // User is out of location - show "Out of Location" for 5 seconds
       setState(() {
         _currentAttendanceStatus = AttendanceStatus.outOfLocation;
       });
+
+      // Wait 5 seconds then reset to allow trying again
+      await Future.delayed(const Duration(seconds: 5));
+      
+      if (mounted) {
+        setState(() {
+          _currentAttendanceStatus = AttendanceStatus.markAttendance;
+        });
+      }
     }
   }
 

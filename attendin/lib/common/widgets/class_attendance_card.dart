@@ -32,17 +32,6 @@ class ClassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppColorScheme colors = AppColors.of(context);
 
-    BoxDecoration originalMarkAttendanceCardNameLocationDecoration =
-        BoxDecoration(
-      color: colors.secondaryBackground,
-      borderRadius: const BorderRadius.all(Radius.circular(15)),
-    );
-
-    BoxDecoration circularInfoIconBoxDecoration = BoxDecoration(
-      color: colors.secondaryBackground,
-      shape: BoxShape.circle,
-    );
-
     return Container(
       padding: const EdgeInsets.all(20.0),
       decoration: BoxDecoration(
@@ -65,19 +54,57 @@ class ClassCard extends StatelessWidget {
               Container(
                 width: double.infinity,
                 padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: originalMarkAttendanceCardNameLocationDecoration,
-                child: Column(
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: colors.secondaryBackground,
+                  borderRadius: const BorderRadius.all(Radius.circular(25)),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(
-                      currentClass!.subject,
-                      style: AppTextStyles.classTitle(context),
-                      textAlign: TextAlign.center,
+                    // Centered content
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          currentClass!.subject,
+                          style: AppTextStyles.classTitle(context),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.location_on,
+                                size: 16, color: colors.fieldTitleColor),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                currentClass!.location,
+                                style: AppTextStyles.classLocation(context),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    Text(
-                      currentClass!.location,
-                      style: AppTextStyles.classLocation(context),
-                      textAlign: TextAlign.center,
+                    // Info icon on the right
+                    Positioned(
+                      right: 0,
+                      child: InkWell(
+                        onTap: () {
+                          if (currentClass != null && onInfoIconPressed != null) {
+                            onInfoIconPressed!();
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(Icons.info_outline, color: colors.textColor),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -116,50 +143,32 @@ class ClassCard extends StatelessWidget {
             _buildAttendanceContent(colors),
             const SizedBox(height: 15),
           ],
-          Row(
-            mainAxisAlignment: showAttendanceActions
-                ? MainAxisAlignment.spaceBetween
-                : MainAxisAlignment.center,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: colors.secondaryBackground,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.access_time,
-                        size: 18, color: colors.fieldTitleColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      currentClass != null
-                          ? '${getDaysString(currentClass!.daysOfWeek)} / '
-                              '${formatTimeOfDay(currentClass!.startTime)} - ${formatTimeOfDay(currentClass!.endTime)}'
-                          : 'No class info available',
-                      style: AppTextStyles.hourlyTime(context),
-                    ),
-                  ],
-                ),
+          // Bottom section: Full-width date/time information
+          if (currentClass != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: colors.secondaryBackground,
+                borderRadius: BorderRadius.circular(20),
               ),
-              if (showAttendanceActions)
-                InkWell(
-                  onTap: () {
-                    if (currentClass != null && onInfoIconPressed != null) {
-                      onInfoIconPressed!();
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: circularInfoIconBoxDecoration,
-                    child: Icon(Icons.info_outline, color: colors.textColor),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.access_time,
+                      size: 18, color: colors.fieldTitleColor),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      '${getDaysString(currentClass!.daysOfWeek)} / '
+                      '${formatTimeOfDay(currentClass!.startTime)} - ${formatTimeOfDay(currentClass!.endTime)}',
+                      style: AppTextStyles.hourlyTime(context),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-            ],
-          ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -184,6 +193,16 @@ class ClassCard extends StatelessWidget {
             onPressed: isButtonEnabled && onMarkAttendancePressed != null
                 ? onMarkAttendancePressed
                 : null,
+          ),
+        );
+      case AttendanceStatus.marking:
+        return SizedBox(
+          height: 74.0,
+          width: double.infinity,
+          child: PrimaryButton(
+            label: 'Marking Attendance...',
+            backgroundColor: colors.primaryBlue,
+            onPressed: null, // Disabled while marking
           ),
         );
       case AttendanceStatus.attended:
