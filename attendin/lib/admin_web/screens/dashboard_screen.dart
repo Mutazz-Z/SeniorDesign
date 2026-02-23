@@ -174,8 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Text(
                             'Dashboard',
                             style: AppTextStyles.screentitle(context).copyWith(
-                                fontSize: 32,
-                                color: colors.primaryBlue),
+                                fontSize: 32, color: colors.fieldTitleColor),
                           ),
                           const SizedBox(height: 5),
                           Text('Overview of your current and upcoming classes',

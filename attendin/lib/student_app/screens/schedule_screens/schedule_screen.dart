@@ -13,7 +13,6 @@ import 'package:attendin/common/data/class_data_provider.dart';
 import 'package:attendin/common/theme/theme_provider.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -31,7 +30,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
   }
 
-  // NEW: Refresh function
   Future<void> _handleRefresh() async {
     final userProvider = Provider.of<UserDataProvider>(context, listen: false);
     final enrollmentProvider =
