@@ -8,8 +8,6 @@ import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:attendin/common/utils/date_time_utils.dart';
-import 'package:attendin/common/data/class_data_provider.dart';
-import 'package:attendin/common/models/class_info.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -454,7 +452,7 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
         const SizedBox(height: 16),
         Expanded(
           child: loading
-              ? Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator())
               : ListView.builder(
                   itemCount: students.length,
                   itemBuilder: (context, index) {

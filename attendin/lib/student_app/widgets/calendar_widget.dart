@@ -40,9 +40,9 @@ class CalendarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppColorScheme colors = AppColors.of(context);
-    
+
     // Calculate current time position in the timeline
-    final rowHeight = 50.0;
+    const rowHeight = 50.0;
     final nowDecimal = now.hour + now.minute / 60.0;
     final currentTimeOffset = (nowDecimal * rowHeight) + 24;
 
@@ -174,14 +174,15 @@ class CalendarWidget extends StatelessWidget {
                                       width: 70,
                                       child: Text(
                                         formatHour(index),
-                                        style: AppTextStyles.hourlyTime(context),
+                                        style:
+                                            AppTextStyles.hourlyTime(context),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
                                     Expanded(
                                       child: Divider(
-                                        color:
-                                            colors.secondaryTextColor.withAlpha(50),
+                                        color: colors.secondaryTextColor
+                                            .withAlpha(50),
                                         thickness: 1,
                                       ),
                                     ),
@@ -192,13 +193,14 @@ class CalendarWidget extends StatelessWidget {
                           ),
                           // Class blocks
                           ...userClasses
-                              .where((cls) => cls.daysOfWeek.contains(todayWeekday))
+                              .where((cls) =>
+                                  cls.daysOfWeek.contains(todayWeekday))
                               .map((cls) {
                             final startHour = cls.startTime.hour;
                             final startMinute = cls.startTime.minute;
                             final endHour = cls.endTime.hour;
                             final endMinute = cls.endTime.minute;
-                            final rowHeight = 50.0;
+                            const rowHeight = 50.0;
 
                             final classEndDecimal = endHour + endMinute / 60.0;
                             final classStartDecimal =
@@ -207,7 +209,8 @@ class CalendarWidget extends StatelessWidget {
                             final topOffset =
                                 (classStartDecimal * rowHeight) + 24;
                             final blockHeight =
-                                (classEndDecimal - classStartDecimal) * rowHeight;
+                                (classEndDecimal - classStartDecimal) *
+                                    rowHeight;
 
                             return Positioned(
                               left: 70,
@@ -237,10 +240,11 @@ class CalendarWidget extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(cls.subject,
-                                        style: AppTextStyles.classTitle(context)),
-                                    Text(cls.location,
                                         style:
-                                            AppTextStyles.classLocation(context)),
+                                            AppTextStyles.classTitle(context)),
+                                    Text(cls.location,
+                                        style: AppTextStyles.classLocation(
+                                            context)),
                                     Text(
                                       '${formatHourMinute(cls.startTime.hour, cls.startTime.minute)}'
                                       ' - '
@@ -266,6 +270,7 @@ class CalendarWidget extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
               ],
             ),
           ),

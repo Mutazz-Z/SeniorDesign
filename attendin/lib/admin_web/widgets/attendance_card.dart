@@ -58,7 +58,7 @@ class AttendanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.secondaryTextColor.withOpacity(0.3)),
+        border: Border.all(color: colors.secondaryTextColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -67,7 +67,7 @@ class AttendanceCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 12),
             width: double.infinity,
             decoration: BoxDecoration(
-              color: headerColor.withOpacity(0.25),
+              color: headerColor.withValues(alpha: 0.25),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
             ),

@@ -113,7 +113,7 @@ class ProfileScreen extends StatelessWidget {
                       buttons: [
                         ModalButtonConfig(
                           label: 'Cancel',
-                          buttonColor: colors.errorRed,
+                          buttonColor: colors.accentTeal,
                           onPressed: () {},
                         ),
                         ModalButtonConfig(

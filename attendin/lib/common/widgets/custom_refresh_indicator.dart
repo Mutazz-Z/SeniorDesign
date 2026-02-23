@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -12,12 +11,12 @@ class CustomRefreshIndicator extends StatefulWidget {
   final double indicatorExtent;
 
   const CustomRefreshIndicator({
-    Key? key,
+    super.key,
     required this.onRefresh,
     required this.child,
     this.refreshTriggerPullDistance = 100.0,
     this.indicatorExtent = 100.0,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomRefreshIndicator> createState() => _CustomRefreshIndicatorState();
@@ -180,7 +179,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
     final logoAsset = isDarkMode
         ? 'assets/Reload_Logo_A-Dark.svg'
         : 'assets/Reload_Logo_A-Light.svg';
-    final checkAsset = 'assets/Reload_Logo_Check.svg';
+    const checkAsset = 'assets/Reload_Logo_Check.svg';
 
     return Stack(
       children: [
@@ -214,7 +213,7 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         )

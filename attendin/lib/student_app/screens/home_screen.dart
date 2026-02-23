@@ -13,8 +13,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendin/common/data/attendance_data_provider.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:attendin/common/models/class_info.dart';
 import 'package:provider/provider.dart';
 import 'package:attendin/common/data/user_data_provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
@@ -385,8 +383,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (snapshot.hasData &&
                             snapshot.data != null &&
                             snapshot.data!.exists) {
-                            final data =
-                                snapshot.data!.data() as Map<String, dynamic>;
 
                             // // Update the location/time/status dynamically
                             // _currentClass!.location =
