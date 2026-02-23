@@ -205,24 +205,24 @@ class ProfilePictureWidget extends StatelessWidget {
       final initials = _getInitials(name);
       final backgroundColor = _getColorForName(name);
       final textColor = _getTextColor(backgroundColor);
-      final initialsWidget = Center(
+      final initialsWidget = Transform.translate(
+        offset: const Offset(0, 2),
         child: Text(
           initials,
           style: TextStyle(
             color: textColor,
             fontSize: size * 0.4,
             fontWeight: FontWeight.bold,
+            height: 1.0,
           ),
         ),
       );
 
       // Display a person icon if there are no initials to show
-      final placeholderWidget = Center(
-        child: Icon(
-          Icons.person,
-          color: textColor,
-          size: size * 0.6,
-        ),
+      final placeholderWidget = Icon(
+        Icons.person,
+        color: textColor,
+        size: size * 0.6,
       );
 
       final childWidget =
@@ -238,6 +238,7 @@ class ProfilePictureWidget extends StatelessWidget {
         return Container(
           width: size,
           height: size,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(20.0),

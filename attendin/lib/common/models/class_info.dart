@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 enum AttendanceStatus {
   markAttendance,
+  marking,
   attended,
   missed,
   outOfLocation,

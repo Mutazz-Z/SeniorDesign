@@ -57,6 +57,7 @@ class _DaySelectorState extends State<DaySelector> {
                 });
               },
               selectedColor: colors.primaryBlue.withValues(alpha: 0.8),
+              backgroundColor: colors.cardColor,
               labelStyle: TextStyle(
                 color:
                     isSelected ? colors.whiteColor : colors.textColor,

@@ -2,9 +2,9 @@ import 'package:attendin/admin_web/widgets/day_selector.dart';
 import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/widgets/labeled_input_field.dart';
 import 'package:attendin/common/widgets/primary_button.dart';
+import 'package:attendin/common/widgets/time_picker.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
-import 'package:attendin/common/utils/date_time_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
 import 'package:attendin/common/data/user_data_provider.dart';
@@ -64,21 +64,16 @@ class _AddClassScreenState extends State<AddClassScreen> {
     super.dispose();
   }
 
-  Future<void> _selectTime(BuildContext context,
-      {required bool isStartTime}) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: isStartTime ? _startTime : _endTime,
-    );
-    if (picked != null) {
-      setState(() {
-        if (isStartTime) {
-          _startTime = picked;
-        } else {
-          _endTime = picked;
-        }
-      });
-    }
+  void _updateStartTime(TimeOfDay newTime) {
+    setState(() {
+      _startTime = newTime;
+    });
+  }
+
+  void _updateEndTime(TimeOfDay newTime) {
+    setState(() {
+      _endTime = newTime;
+    });
   }
 
   @override
@@ -149,10 +144,20 @@ class _AddClassScreenState extends State<AddClassScreen> {
                 Row(
                   children: [
                     Expanded(
-                        child: _buildTimePicker(context, isStartTime: true)),
+                      child: CustomTimePicker(
+                        label: 'Start Time:',
+                        initialTime: _startTime,
+                        onTimeChanged: _updateStartTime,
+                      ),
+                    ),
                     const SizedBox(width: 24),
                     Expanded(
-                        child: _buildTimePicker(context, isStartTime: false)),
+                      child: CustomTimePicker(
+                        label: 'End Time:',
+                        initialTime: _endTime,
+                        onTimeChanged: _updateEndTime,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -180,7 +185,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),
                       isActive: true,
-                      adminId: userProvider.uid ?? '',
+                      adminId: userProvider.uid,
                       attendanceWindowMinutes:
                           int.tryParse(_attendanceWindowController.text) ?? 15,
                     );
@@ -194,42 +199,6 @@ class _AddClassScreenState extends State<AddClassScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTimePicker(BuildContext context, {required bool isStartTime}) {
-    final colors = AppColors.of(context);
-    final time = isStartTime ? _startTime : _endTime;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(isStartTime ? 'Start Time:' : 'End Time:',
-            style: AppTextStyles.fieldtext(context)),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () => _selectTime(context, isStartTime: isStartTime),
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-            decoration: BoxDecoration(
-              color: colors.secondaryBackground,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  formatTimeOfDay(time),
-                  style:
-                      AppTextStyles.plaintext(context).copyWith(fontSize: 16),
-                ),
-                Icon(Icons.edit_calendar_outlined,
-                    color: colors.secondaryTextColor),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -161,7 +161,7 @@ class _ClassCalendarState extends State<ClassCalendar> {
                     cellColor = colors.primaryBlue;
                     textColor = colors.whiteColor;
                   } else {
-                    cellColor = colors.secondaryBackground.withOpacity(0.3);
+                    cellColor = colors.secondaryBackground.withValues(alpha: 0.3);
                     textColor = colors.fieldTitleColor;
                   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
+import 'package:attendin/common/utils/date_time_utils.dart';
 
 class CalendarWidget extends StatelessWidget {
   final List<ClassInfo> userClasses;
@@ -16,33 +17,10 @@ class CalendarWidget extends StatelessWidget {
     required this.todayWeekday,
   });
 
-  String getDayName(int weekday) {
-    switch (weekday) {
-      case 1:
-        return 'Monday';
-      case 2:
-        return 'Tuesday';
-      case 3:
-        return 'Wednesday';
-      case 4:
-        return 'Thursday';
-      case 5:
-        return 'Friday';
-      case 6:
-        return 'Saturday';
-      case 7:
-        return 'Sunday';
-      default:
-        return '';
-    }
-  }
-
-  // Helper to format time with AM/PM
   String formatHour(int hour) {
-    if (hour == 0) return '12';
-    if (hour == 12) return '12';
-    if (hour < 12) return '$hour';
-    return '${hour - 12}';
+    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    final period = hour < 12 ? 'AM' : 'PM';
+    return '$displayHour $period';
   }
 
   String formatHourMinute(int hour, int minute) {
@@ -63,18 +41,10 @@ class CalendarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppColorScheme colors = AppColors.of(context);
 
-    // Determine the current hour and calculate the next four hours
-    final int currentHour = now.hour;
-    final List<int> hoursToShow = List.generate(4, (index) {
-      return (currentHour + index) % 24;
-    });
-
-    final rowHeight = 50.0;
-    final firstHour = hoursToShow.first;
-    final visibleStartDecimal = firstHour.toDouble();
+    // Calculate current time position in the timeline
+    const rowHeight = 50.0;
     final nowDecimal = now.hour + now.minute / 60.0;
-    final currentTimeOffset =
-        (nowDecimal - visibleStartDecimal) * rowHeight + 24;
+    final currentTimeOffset = (nowDecimal * rowHeight) + 24;
 
     return Container(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -172,7 +142,7 @@ class CalendarWidget extends StatelessWidget {
                 Align(
                   alignment: Alignment.topRight,
                   child: Text(
-                    '${now.day} ${getDayName(now.weekday)}',
+                    '${now.day} ${getDayNameFromWeekday(now.weekday)}',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -185,129 +155,120 @@ class CalendarWidget extends StatelessWidget {
 
                 // Timeline grid
                 SizedBox(
-                  height: 4 * 50, // 5 hours, 50px each
-                  child: Stack(
-                    children: [
-                      // Hour labels
-                      Column(
-                        children: hoursToShow.map((hour) {
-                          return SizedBox(
-                            height: 50,
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 70,
-                                  child: Text(
-                                    formatHour(hour),
-                                    style: AppTextStyles.hourlyTime(context),
-                                  ),
+                  height: 200,
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 24 * 50,
+                      child: Stack(
+                        children: [
+                          // Hour labels
+                          Column(
+                            children: List.generate(24, (index) {
+                              return SizedBox(
+                                height: 50,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 70,
+                                      child: Text(
+                                        formatHour(index),
+                                        style:
+                                            AppTextStyles.hourlyTime(context),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Divider(
+                                        color: colors.secondaryTextColor
+                                            .withAlpha(50),
+                                        thickness: 1,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                Expanded(
-                                  child: Divider(
-                                    color:
-                                        colors.secondaryTextColor.withAlpha(50),
-                                    thickness: 1,
+                              );
+                            }).toList(),
+                          ),
+                          // Class blocks
+                          ...userClasses
+                              .where((cls) =>
+                                  cls.daysOfWeek.contains(todayWeekday))
+                              .map((cls) {
+                            final startHour = cls.startTime.hour;
+                            final startMinute = cls.startTime.minute;
+                            final endHour = cls.endTime.hour;
+                            final endMinute = cls.endTime.minute;
+                            const rowHeight = 50.0;
+
+                            final classEndDecimal = endHour + endMinute / 60.0;
+                            final classStartDecimal =
+                                startHour + startMinute / 60.0;
+
+                            final topOffset =
+                                (classStartDecimal * rowHeight) + 24;
+                            final blockHeight =
+                                (classEndDecimal - classStartDecimal) *
+                                    rowHeight;
+
+                            return Positioned(
+                              left: 70,
+                              top: topOffset,
+                              right: 0,
+                              height: blockHeight,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                    vertical: 2), // smaller margin
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: colors.secondaryBackground,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: colors.primaryBlue.withAlpha(80),
+                                    width: 2,
                                   ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(30),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      // Class blocks
-                      ...userClasses
-                          .where((cls) => cls.daysOfWeek.contains(todayWeekday))
-                          .map((cls) {
-                        final startHour = cls.startTime.hour;
-                        final startMinute = cls.startTime.minute;
-                        final endHour = cls.endTime.hour;
-                        final endMinute = cls.endTime.minute;
-                        final firstHour = hoursToShow.first;
-                        final lastHour = hoursToShow.last;
-                        final rowHeight = 50.0;
-
-                        // Only show if class overlaps with visible hours
-                        final classEndDecimal = endHour + endMinute / 60.0;
-                        final classStartDecimal =
-                            startHour + startMinute / 60.0;
-                        final visibleEndDecimal = lastHour + 1;
-                        final visibleStartDecimal = firstHour.toDouble();
-
-                        if (classEndDecimal <= visibleStartDecimal ||
-                            classStartDecimal >= visibleEndDecimal)
-                          return SizedBox();
-
-                        // Clamp start and end to visible range
-                        final blockStartDecimal =
-                            classStartDecimal < visibleStartDecimal
-                                ? visibleStartDecimal
-                                : classStartDecimal;
-                        final blockEndDecimal =
-                            classEndDecimal > visibleEndDecimal
-                                ? visibleEndDecimal
-                                : classEndDecimal;
-
-                        final topOffset =
-                            (blockStartDecimal - visibleStartDecimal) *
-                                    rowHeight +
-                                24;
-                        final blockHeight =
-                            (blockEndDecimal - blockStartDecimal) * rowHeight;
-
-                        return Positioned(
-                          left: 70,
-                          top: topOffset,
-                          right: 0,
-                          height: blockHeight,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 2), // smaller margin
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: colors.secondaryBackground,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: colors.primaryBlue.withAlpha(80),
-                                width: 2,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(cls.subject,
+                                        style:
+                                            AppTextStyles.classTitle(context)),
+                                    Text(cls.location,
+                                        style: AppTextStyles.classLocation(
+                                            context)),
+                                    Text(
+                                      '${formatHourMinute(cls.startTime.hour, cls.startTime.minute)}'
+                                      ' - '
+                                      '${formatHourMinute(cls.endTime.hour, cls.endTime.minute)}',
+                                      style: AppTextStyles.hourlyTime(context),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(30),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(cls.subject,
-                                    style: AppTextStyles.classTitle(context)),
-                                Text(cls.location,
-                                    style:
-                                        AppTextStyles.classLocation(context)),
-                                Text(
-                                  '${formatHourMinute(cls.startTime.hour, cls.startTime.minute)}'
-                                  ' - '
-                                  '${formatHourMinute(cls.endTime.hour, cls.endTime.minute)}',
-                                  style: AppTextStyles.hourlyTime(context),
-                                ),
-                              ],
+                            );
+                          }),
+                          // Current time indicator line
+                          Positioned(
+                            left: 70,
+                            right: 0,
+                            top: currentTimeOffset,
+                            child: Container(
+                              height: 2,
+                              color: colors.errorRed,
                             ),
                           ),
-                        );
-                      }).toList(),
-                      // Current time indicator line (move this after class blocks)
-                      Positioned(
-                        left: 70,
-                        right: 0,
-                        top: currentTimeOffset,
-                        child: Container(
-                          height: 2,
-                          color: Colors.redAccent,
-                        ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
