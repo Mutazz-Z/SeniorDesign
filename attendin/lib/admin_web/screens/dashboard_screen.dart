@@ -71,6 +71,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Called only when the Class ID changes (e.g. Class A ends, Class B starts)
   void _handleSessionSwitch(ClassInfo? newSession) {
+    if (newSession == null) {
+      _trackedSessionId = "";
+      _attendanceStream = null;
+      _enrolledStudents = [];
+      return;
+    }
     if (newSession?.id == _trackedSessionId) return;
 
     _trackedSessionId = newSession!.id;

@@ -470,40 +470,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       onInfoIconPressed: () {},
                     ),
                   const SizedBox(height: kSectionSpacing),
-                  MockAttendanceControls(
-                    onStatusChanged: (status) {
-                      setState(() {
-                        _currentAttendanceStatus = status;
-                      });
-                    },
-                    onToggleLocation: () {
-                      setState(() {
-                        _mockUserInLocation = !_mockUserInLocation;
-                        if (_currentClass != null &&
-                            _currentAttendanceStatus ==
-                                AttendanceStatus.markAttendance) {
-                          _markAttendance();
-                        }
-                      });
-                    },
-                    mockUserInLocation: _mockUserInLocation,
-                    onNoClass: () {
-                      setState(() {
-                        _currentClass = null;
-                        _currentAttendanceStatus =
-                            AttendanceStatus.markAttendance;
-                      });
-                    },
-                    onMarkAttendanceSet: () {
-                      setState(() {
-                        _currentClass = studentClasses.isNotEmpty
-                            ? studentClasses.first
-                            : null;
-                        _currentAttendanceStatus =
-                            AttendanceStatus.markAttendance;
-                      });
-                    },
-                  ),
+                  if (true) // For removing the mock controls easily
+                    MockAttendanceControls(
+                      onStatusChanged: (status) {
+                        setState(() {
+                          _currentAttendanceStatus = status;
+                        });
+                      },
+                      onToggleLocation: () {
+                        setState(() {
+                          _mockUserInLocation = !_mockUserInLocation;
+                          if (_currentClass != null &&
+                              _currentAttendanceStatus ==
+                                  AttendanceStatus.markAttendance) {
+                            _markAttendance();
+                          }
+                        });
+                      },
+                      mockUserInLocation: _mockUserInLocation,
+                      onNoClass: () {
+                        setState(() {
+                          _currentClass = null;
+                          _currentAttendanceStatus =
+                              AttendanceStatus.markAttendance;
+                        });
+                      },
+                      onMarkAttendanceSet: () {
+                        setState(() {
+                          _currentClass = studentClasses.isNotEmpty
+                              ? studentClasses.first
+                              : null;
+                          _currentAttendanceStatus =
+                              AttendanceStatus.markAttendance;
+                        });
+                      },
+                    ),
                   const SizedBox(height: kSectionSpacing),
                 ],
               ),

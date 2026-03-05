@@ -71,6 +71,10 @@ class _SelectedClassSettingsScreenState
     });
   }
 
+  String generateLocationId(String location) {
+    return location.replaceAll(RegExp(r'[0-9]'), '').toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -174,11 +178,14 @@ class _SelectedClassSettingsScreenState
                     final provider =
                         Provider.of<ClassDataProvider>(context, listen: false);
 
+                    final locationId =
+                        generateLocationId(_locationController.text);
+
                     final updatedClass = ClassInfo(
                       id: widget.classInfo.id,
                       subject: _courseNameController.text,
                       location: _locationController.text,
-                      locationId: widget.classInfo.locationId,
+                      locationId: locationId,
                       startTime: _startTime,
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),

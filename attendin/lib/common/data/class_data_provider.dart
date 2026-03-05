@@ -117,6 +117,7 @@ class ClassDataProvider extends ChangeNotifier {
         'adminId': newClass.adminId,
         'subject': newClass.subject,
         'location': newClass.location,
+        'locationId': newClass.locationId,
         'startTime': newClass.startTime.hour * 60 +
             newClass.startTime.minute, // Store as minutes from midnight
         'endTime': newClass.endTime.hour * 60 + newClass.endTime.minute,
@@ -155,6 +156,7 @@ class ClassDataProvider extends ChangeNotifier {
           .update({
         'subject': updatedClass.subject,
         'location': updatedClass.location,
+        'locationId': updatedClass.locationId,
         'startTime':
             updatedClass.startTime.hour * 60 + updatedClass.startTime.minute,
         'endTime': updatedClass.endTime.hour * 60 + updatedClass.endTime.minute,

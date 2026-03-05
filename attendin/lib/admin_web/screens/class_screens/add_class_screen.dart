@@ -76,6 +76,10 @@ class _AddClassScreenState extends State<AddClassScreen> {
     });
   }
 
+  String generateLocationId(String location) {
+    return location.replaceAll(RegExp(r'[0-9]'), '').toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -176,14 +180,15 @@ class _AddClassScreenState extends State<AddClassScreen> {
                     final userProvider =
                         Provider.of<UserDataProvider>(context, listen: false);
 
+                    final locationId =
+                        generateLocationId(_locationController.text);
+
                     final newClass = ClassInfo(
                       id: _courseIdController
                           .text, // Firestore will auto-generate
                       subject: _courseNameController.text,
                       location: _locationController.text,
-                      locationId: _locationController.text
-                          .toLowerCase()
-                          .replaceAll(' ', ''), // Simple ID generation
+                      locationId: locationId,
                       startTime: _startTime,
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),
