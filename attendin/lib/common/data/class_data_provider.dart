@@ -177,6 +177,26 @@ class ClassDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setClassActiveStatus(String classId, bool isActive) async {
+    try {
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'is_active': isActive});
+
+      // Update local cache
+      final index = classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        final oldClass = classes[index];
+        classes[index] = oldClass.copyWith(isActive: isActive);
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating class active status: $e");
+    }
+  }
+
   void clearData() {
     classes = [];
     loading = false;

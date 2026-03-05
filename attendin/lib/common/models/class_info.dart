@@ -64,6 +64,30 @@ class ClassInfo {
       endTime.hashCode ^
       daysOfWeek.hashCode ^
       attendanceWindowMinutes.hashCode;
+
+  ClassInfo copyWith({
+    String? id,
+    String? subject,
+    String? location,
+    String? locationId,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    List<int>? daysOfWeek,
+    bool? isActive,
+    String? adminId,
+  }) {
+    return ClassInfo(
+      id: id ?? this.id,
+      subject: subject ?? this.subject,
+      location: location ?? this.location,
+      locationId: locationId ?? this.locationId,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      isActive: isActive ?? this.isActive,
+      adminId: adminId ?? this.adminId,
+    );
+  }
 }
 
 class ClassStudent {

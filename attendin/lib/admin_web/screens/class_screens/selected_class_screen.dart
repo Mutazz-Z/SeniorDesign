@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendin/common/data/attendance_data_provider.dart';
+import 'package:attendin/common/data/class_data_provider.dart';
 
 import 'package:flutter/material.dart';
 
@@ -525,6 +526,11 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
     );
   }
 
+  Future<void> _setClassActiveStatus(bool isActive) async {
+    await Provider.of<ClassDataProvider>(context, listen: false)
+        .setClassActiveStatus(widget.classInfo.id, isActive);
+  }
+
   void _showSetClassStatusModal() {
     final AppColorScheme colors = AppColors.of(context);
 
@@ -539,12 +545,12 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
             ModalButtonConfig(
               buttonColor: colors.accentGreen,
               label: 'Active',
-              onPressed: () {},
+              onPressed: () => _setClassActiveStatus(true),
             ),
             ModalButtonConfig(
               buttonColor: colors.errorOrange,
               label: 'Inactive',
-              onPressed: () {},
+              onPressed: () => _setClassActiveStatus(false),
             ),
             ModalButtonConfig(
               buttonColor: colors.errorRed,
