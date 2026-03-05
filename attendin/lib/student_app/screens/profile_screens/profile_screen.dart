@@ -1,6 +1,7 @@
 import 'package:attendin/common/widgets/profile_picture_widget.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
+import 'package:attendin/common/services/image_service.dart';
 import 'package:attendin/student_app/widgets/custom_bottom_nav_bar.dart';
 import 'package:attendin/common/widgets/setting_tile.dart';
 import 'package:attendin/student_app/widgets/logout_confirmation_modal.dart';
@@ -40,12 +41,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _editProfilePicture() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content:
-              Text('Edit profile picture functionality will be added here!')),
-    );
+  void _editProfilePicture() async {
+    final imageService = ImageService();
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      print('Opening image picker...');
+      // Pick image
+      final imageFile = await imageService.pickImage();
+      if (imageFile == null) {
+        // User cancelled
+        print('User cancelled image selection');
+        return;
+      }
+      print('Image selected: ${imageFile.name}');
+
+      // TODO: Add image upload logic here
+
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text(
+              'Image selected: ${imageFile.name}. Upload functionality pending backend implementation.'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e, stackTrace) {
+      print('ERROR in _editProfilePicture: $e');
+      print('Stack trace: $stackTrace');
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Error selecting image: ${e.toString()}'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   @override

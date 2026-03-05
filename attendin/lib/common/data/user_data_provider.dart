@@ -38,6 +38,37 @@ class UserDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfilePicture(String newProfilePictureUrl) async {
+    try {
+      print('Updating profile picture in Firestore...');
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      // Update Firestore with timeout
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .update({'profilePicture': newProfilePictureUrl}).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Firestore update timeout');
+        },
+      );
+
+      print('Firestore updated successfully');
+      // Update local state
+      profilePicture = newProfilePictureUrl;
+      notifyListeners();
+      print('Local state updated');
+    } catch (e) {
+      print('Error updating profile picture: $e');
+      print('Error type: ${e.runtimeType}');
+      rethrow;
+    }
+  }
+
   void clearData() {
     uid = '';
     schoolId = '';

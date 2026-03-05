@@ -2,6 +2,7 @@ import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/student_app/widgets/calendar_widget.dart';
 import 'package:attendin/student_app/widgets/mock_attendance_controls.dart';
 import 'package:attendin/common/widgets/class_attendance_card.dart';
+import 'package:attendin/common/widgets/custom_refresh_indicator.dart';
 import 'package:attendin/student_app/widgets/custom_bottom_nav_bar.dart';
 import 'package:attendin/common/widgets/home_header.dart';
 import 'package:attendin/common/models/class_info.dart';
@@ -12,8 +13,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendin/common/data/attendance_data_provider.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:attendin/common/models/class_info.dart';
 import 'package:provider/provider.dart';
 import 'package:attendin/common/data/user_data_provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
@@ -219,25 +218,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _markAttendance() async {
     if (_currentClass == null) return;
+
+    // Show "Marking Attendance..." state
+    setState(() {
+      _currentAttendanceStatus = AttendanceStatus.marking;
+    });
+
+    // Simulate getting location (add small delay to mimic real location fetch)
+    await Future.delayed(const Duration(milliseconds: 500));
+
     final userProvider = Provider.of<UserDataProvider>(context, listen: false);
     final attendanceProvider =
         Provider.of<AttendanceProvider>(context, listen: false);
 
-    // 2. Check Location (Keep your mock logic for now, later we add Geolocator)
+    // Check Location using mock data
     if (_isUserInLocation()) {
-      // 3. Optimistic UI Update (Show success immediately before DB finishes)
+      // User is in location - mark as attended
       setState(() {
         _currentAttendanceStatus = AttendanceStatus.attended;
       });
       _confettiController.play();
 
-      // 4. Prepare Data for Database
+      // Prepare Data for Database
       final now = DateTime.now();
       final dateString =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
       try {
-        // 5. Write to Firebase
+        // Write to Firebase
         await attendanceProvider.markPresent(
             _currentClass!.id, userProvider.uid, dateString);
         print("Attendance saved to database!");
@@ -250,9 +258,19 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } else {
+      // User is out of location - show "Out of Location" for 5 seconds
       setState(() {
         _currentAttendanceStatus = AttendanceStatus.outOfLocation;
       });
+
+      // Wait 5 seconds then reset to allow trying again
+      await Future.delayed(const Duration(seconds: 5));
+
+      if (mounted) {
+        setState(() {
+          _currentAttendanceStatus = AttendanceStatus.markAttendance;
+        });
+      }
     }
   }
 
@@ -324,47 +342,47 @@ class _HomeScreenState extends State<HomeScreen> {
     const double kSectionSpacing = 30.0;
     const double kPadding = 24.0;
 
-    final RenderBox? buttonRenderBox = _markAttendanceButtonKey.currentContext
-        ?.findRenderObject() as RenderBox?;
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Scaffold(
       backgroundColor: colors.secondaryBackground,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: _handleRefresh,
-              child: SingleChildScrollView(
-                physics:
-                    const AlwaysScrollableScrollPhysics(), // ensures scroll even if content is short
-                padding: const EdgeInsets.all(kPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    HomeScreenHeader(
-                        userName: userData.userName,
-                        profilePicture: userData.profilePicture),
-                    const SizedBox(height: kSectionSpacing),
-                    CalendarWidget(
-                      userClasses: studentClasses,
-                      now: now,
-                      todayWeekday: todayWeekday,
-                    ),
-                    const SizedBox(height: kSectionSpacing),
-                    if (_currentClass != null)
-                      StreamBuilder<DocumentSnapshot>(
+      body: Stack(
+        children: [
+          CustomRefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              padding: EdgeInsets.only(
+                  top: kPadding + statusBarHeight,
+                  left: kPadding,
+                  right: kPadding,
+                  bottom: kPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HomeScreenHeader(
+                      userName: userData.userName,
+                      profilePicture: userData.profilePicture),
+                  const SizedBox(height: kSectionSpacing),
+                  CalendarWidget(
+                    userClasses: studentClasses,
+                    now: now,
+                    todayWeekday: todayWeekday,
+                  ),
+                  const SizedBox(height: kSectionSpacing),
+                  if (_currentClass != null)
+                    StreamBuilder<DocumentSnapshot>(
                         // 1. Listen specifically to the CURRENT class document
-                        stream: FirebaseFirestore.instance
-                            .collection('classes')
-                            .doc(_currentClass!.id)
-                            .snapshots(),
-                        builder: (context, snapshot) {
+                      stream: FirebaseFirestore.instance
+                          .collection('classes')
+                          .doc(_currentClass!.id)
+                          .snapshots(),
+                      builder: (context, snapshot) {
                           // 2. If we have fresh data, update our local _currentClass object
-                          if (snapshot.hasData &&
-                              snapshot.data != null &&
-                              snapshot.data!.exists) {
-                            final data =
-                                snapshot.data!.data() as Map<String, dynamic>;
+                        if (snapshot.hasData &&
+                            snapshot.data != null &&
+                            snapshot.data!.exists) {
 
                             // // Update the location/time/status dynamically
                             // _currentClass!.location =
@@ -372,102 +390,96 @@ class _HomeScreenState extends State<HomeScreen> {
                             // _currentClass!.isActive =
                             //     data['is_active'] ?? _currentClass!.isActive;
                             // // You can update other fields here too if needed
-                          }
+                        }
 
-                          return ClassCard(
-                            currentClass: _currentClass,
-                            currentAttendanceStatus: _currentAttendanceStatus,
-                            onMarkAttendancePressed: _markAttendance,
-                            getDaysString: getDaysString,
-                            formatTimeOfDay: formatTimeOfDay,
-                            markAttendanceButtonKey: _markAttendanceButtonKey,
-                            onInfoIconPressed: () {
-                              if (_currentClass != null) {
-                                Navigator.push(
-                                  context,
-                                  customFadePageRoute(ClassDetailScreen(
-                                      classInfo: _currentClass!)),
-                                );
-                              }
-                            },
-                          );
-                        },
-                      )
-                    else
-                      ClassCard(
-                        currentClass: null,
-                        currentAttendanceStatus:
-                            AttendanceStatus.markAttendance,
-                        onMarkAttendancePressed: _markAttendance,
-                        getDaysString: getDaysString,
-                        formatTimeOfDay: formatTimeOfDay,
-                        markAttendanceButtonKey: _markAttendanceButtonKey,
-                        onInfoIconPressed: () {},
-                      ),
-                    const SizedBox(height: kSectionSpacing),
-                    MockAttendanceControls(
-                      onStatusChanged: (status) {
-                        setState(() {
-                          _currentAttendanceStatus = status;
-                        });
+                        return ClassCard(
+                          currentClass: _currentClass,
+                          currentAttendanceStatus: _currentAttendanceStatus,
+                          onMarkAttendancePressed: _markAttendance,
+                          markAttendanceButtonKey: _markAttendanceButtonKey,
+                          onInfoIconPressed: () {
+                            if (_currentClass != null) {
+                              Navigator.push(
+                                context,
+                                customFadePageRoute(ClassDetailScreen(
+                                    classInfo: _currentClass!)),
+                              );
+                            }
+                          },
+                        );
                       },
-                      onToggleLocation: () {
-                        setState(() {
-                          _mockUserInLocation = !_mockUserInLocation;
-                          if (_currentClass != null &&
-                              _currentAttendanceStatus ==
-                                  AttendanceStatus.markAttendance) {
-                            _markAttendance();
-                          }
-                        });
-                      },
-                      mockUserInLocation: _mockUserInLocation,
-                      onNoClass: () {
-                        setState(() {
-                          _currentClass = null;
-                          _currentAttendanceStatus =
-                              AttendanceStatus.markAttendance;
-                        });
-                      },
-                      onMarkAttendanceSet: () {
-                        setState(() {
-                          _currentClass = studentClasses.isNotEmpty
-                              ? studentClasses.first
-                              : null;
-                          _currentAttendanceStatus =
-                              AttendanceStatus.markAttendance;
-                        });
-                      },
+                    )
+                  else
+                    ClassCard(
+                      currentClass: null,
+                      currentAttendanceStatus: AttendanceStatus.markAttendance,
+                      onMarkAttendancePressed: _markAttendance,
+                      markAttendanceButtonKey: _markAttendanceButtonKey,
+                      onInfoIconPressed: () {},
                     ),
-                    const SizedBox(height: kSectionSpacing),
-                  ],
-                ),
+                  const SizedBox(height: kSectionSpacing),
+                  MockAttendanceControls(
+                    onStatusChanged: (status) {
+                      setState(() {
+                        _currentAttendanceStatus = status;
+                      });
+                    },
+                    onToggleLocation: () {
+                      setState(() {
+                        _mockUserInLocation = !_mockUserInLocation;
+                        if (_currentClass != null &&
+                            _currentAttendanceStatus ==
+                                AttendanceStatus.markAttendance) {
+                          _markAttendance();
+                        }
+                      });
+                    },
+                    mockUserInLocation: _mockUserInLocation,
+                    onNoClass: () {
+                      setState(() {
+                        _currentClass = null;
+                        _currentAttendanceStatus =
+                            AttendanceStatus.markAttendance;
+                      });
+                    },
+                    onMarkAttendanceSet: () {
+                      setState(() {
+                        _currentClass = studentClasses.isNotEmpty
+                            ? studentClasses.first
+                            : null;
+                        _currentAttendanceStatus =
+                            AttendanceStatus.markAttendance;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: kSectionSpacing),
+                ],
               ),
             ),
-            if (_buttonSize != Size.zero)
-              Positioned(
-                left: _buttonPosition.dx + _buttonSize.width / 2,
-                top: _buttonPosition.dy - 10,
-                child: ConfettiWidget(
-                  confettiController: _confettiController,
-                  blastDirection: -pi / 2,
-                  emissionFrequency: 0.03,
-                  numberOfParticles: 20,
-                  gravity: 0.2,
-                  colors: [
-                    colors.primaryBlue,
-                    colors.accentGreen,
-                    colors.cardColor,
-                    colors.errorOrange,
-                    colors.errorRed,
-                  ],
-                  shouldLoop: false,
-                  minBlastForce: 10,
-                  maxBlastForce: 20,
-                ),
+          ),
+          if (_buttonSize != Size.zero)
+            Positioned(
+              left: _buttonPosition.dx + _buttonSize.width / 2,
+              top: _buttonPosition.dy - 10,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirection: -pi / 2,
+                emissionFrequency: 0.03,
+                numberOfParticles: 20,
+                gravity: 0.2,
+                colors: [
+                  colors.primaryBlue,
+                  colors.accentGreen,
+                  colors.cardColor,
+                  colors.errorOrange,
+                  colors.errorRed,
+                ],
+                shouldLoop: false,
+                minBlastForce: 10,
+                maxBlastForce: 20,
               ),
-          ],
-        ),
+            ),
+        ],
       ),
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,

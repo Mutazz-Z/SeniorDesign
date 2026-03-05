@@ -79,7 +79,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       final email = _emailController.text.trim();
                       if (email.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Please enter your email.')),
+                          const SnackBar(content: Text('Please enter your email.')),
                         );
                         return;
                       }
@@ -87,7 +87,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         await FirebaseAuth.instance
                             .sendPasswordResetEmail(email: email);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Password reset email sent!')),
+                          const SnackBar(content: Text('Password reset email sent!')),
                         );
                         Navigator.pop(context); // Go back to login
                       } on FirebaseAuthException catch (e) {

@@ -9,8 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
 import 'package:attendin/common/data/enrollment_data_provider.dart';
 
-import 'package:provider/provider.dart';
-
 import 'package:flutter/material.dart';
 
 class LoginScreen extends StatefulWidget {

@@ -141,6 +141,7 @@ class _AdminSchedulePanelState extends State<AdminSchedulePanel> {
         _getSortedSessionsForDay(allAdminClasses, tomorrowWeekday);
 
     return Container(
+      height: double.infinity,
       decoration: BoxDecoration(
         color: colors.secondaryBackground,
         borderRadius: const BorderRadius.only(
@@ -165,7 +166,7 @@ class _AdminSchedulePanelState extends State<AdminSchedulePanel> {
                   stream: attendanceProvider.attendanceStream(
                       session.id, todayDateStr),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) return CircularProgressIndicator();
+                    if (!snapshot.hasData) return const CircularProgressIndicator();
                     final docs = snapshot.data!.docs;
                     final presentCount =
                         docs.where((doc) => doc['status'] == 'present').length;
@@ -198,7 +199,7 @@ class _AdminSchedulePanelState extends State<AdminSchedulePanel> {
                   stream: attendanceProvider.attendanceStream(
                       session.id, tomorrowDateStr),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) return CircularProgressIndicator();
+                    if (!snapshot.hasData) return const CircularProgressIndicator();
                     final docs = snapshot.data!.docs;
                     final presentCount =
                         docs.where((doc) => doc['status'] == 'present').length;

@@ -7,6 +7,8 @@ class SettingTile extends StatelessWidget {
   final String text;
   final Widget? trailingWidget;
   final VoidCallback? onTap;
+  final Color? iconColor;
+  final Color? textColor;
 
   const SettingTile({
     super.key,
@@ -14,6 +16,8 @@ class SettingTile extends StatelessWidget {
     required this.text,
     this.trailingWidget,
     this.onTap,
+    this.iconColor,
+    this.textColor,
   });
 
   @override
@@ -35,12 +39,12 @@ class SettingTile extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: colors.fieldTitleColor.withValues(alpha: .2),
+                color:
+                    (iconColor ?? colors.fieldTitleColor).withValues(alpha: .2),
               ),
               child: Icon(
                 icon,
-                color: colors
-                    .fieldTitleColor,
+                color: iconColor ?? colors.fieldTitleColor,
                 size: 28,
               ),
             ),
@@ -50,7 +54,7 @@ class SettingTile extends StatelessWidget {
                 text,
                 style: AppTextStyles.classTitle(context).copyWith(
                   fontSize: 18,
-                  color: colors.textColor,
+                  color: textColor ?? colors.textColor,
                 ),
               ),
             ),
