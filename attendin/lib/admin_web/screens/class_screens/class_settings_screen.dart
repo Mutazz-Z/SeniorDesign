@@ -147,17 +147,17 @@ class _SelectedClassSettingsScreenState
                   children: [
                     Expanded(
                         child: CustomTimePicker(
-                          label: 'Start Time:',
-                          initialTime: _startTime,
-                          onTimeChanged: _updateStartTime,
-                        )),
+                      label: 'Start Time:',
+                      initialTime: _startTime,
+                      onTimeChanged: _updateStartTime,
+                    )),
                     const SizedBox(width: 24),
                     Expanded(
                         child: CustomTimePicker(
-                          label: 'End Time:',
-                          initialTime: _endTime,
-                          onTimeChanged: _updateEndTime,
-                        )),
+                      label: 'End Time:',
+                      initialTime: _endTime,
+                      onTimeChanged: _updateEndTime,
+                    )),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -178,6 +178,7 @@ class _SelectedClassSettingsScreenState
                       id: widget.classInfo.id,
                       subject: _courseNameController.text,
                       location: _locationController.text,
+                      locationId: widget.classInfo.locationId,
                       startTime: _startTime,
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),

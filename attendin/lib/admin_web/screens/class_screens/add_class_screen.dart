@@ -181,6 +181,9 @@ class _AddClassScreenState extends State<AddClassScreen> {
                           .text, // Firestore will auto-generate
                       subject: _courseNameController.text,
                       location: _locationController.text,
+                      locationId: _locationController.text
+                          .toLowerCase()
+                          .replaceAll(' ', ''), // Simple ID generation
                       startTime: _startTime,
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),

@@ -28,6 +28,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
@@ -71,6 +72,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
