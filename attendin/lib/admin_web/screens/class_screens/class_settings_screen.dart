@@ -71,6 +71,10 @@ class _SelectedClassSettingsScreenState
     });
   }
 
+  String generateLocationId(String location) {
+    return location.replaceAll(RegExp(r'[0-9]'), '').toLowerCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
@@ -147,17 +151,17 @@ class _SelectedClassSettingsScreenState
                   children: [
                     Expanded(
                         child: CustomTimePicker(
-                          label: 'Start Time:',
-                          initialTime: _startTime,
-                          onTimeChanged: _updateStartTime,
-                        )),
+                      label: 'Start Time:',
+                      initialTime: _startTime,
+                      onTimeChanged: _updateStartTime,
+                    )),
                     const SizedBox(width: 24),
                     Expanded(
                         child: CustomTimePicker(
-                          label: 'End Time:',
-                          initialTime: _endTime,
-                          onTimeChanged: _updateEndTime,
-                        )),
+                      label: 'End Time:',
+                      initialTime: _endTime,
+                      onTimeChanged: _updateEndTime,
+                    )),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -174,10 +178,14 @@ class _SelectedClassSettingsScreenState
                     final provider =
                         Provider.of<ClassDataProvider>(context, listen: false);
 
+                    final locationId =
+                        generateLocationId(_locationController.text);
+
                     final updatedClass = ClassInfo(
                       id: widget.classInfo.id,
                       subject: _courseNameController.text,
                       location: _locationController.text,
+                      locationId: locationId,
                       startTime: _startTime,
                       endTime: _endTime,
                       daysOfWeek: _selectedDays.toList(),

@@ -15,6 +15,7 @@ final List<ClassInfo> userClasses = [
     adminId: "test",
     subject: 'Physics II',
     location: 'Braunstein 300',
+    locationId: "braunstein",
     startTime: TimeOfDay(hour: 16, minute: 0),
     endTime: TimeOfDay(hour: 17, minute: 0),
     daysOfWeek: [DateTime.monday, DateTime.wednesday, DateTime.friday],
@@ -24,6 +25,7 @@ final List<ClassInfo> userClasses = [
     adminId: "test",
     subject: 'Physics III',
     location: 'Braunstein 400',
+    locationId: "braunstein",
     startTime: TimeOfDay(hour: 12, minute: 0),
     endTime: TimeOfDay(hour: 13, minute: 0),
     daysOfWeek: [DateTime.monday, DateTime.wednesday, DateTime.friday],
@@ -33,6 +35,7 @@ final List<ClassInfo> userClasses = [
     adminId: "test",
     subject: 'Calculus I',
     location: 'Old Main 101',
+    locationId: "oldmain",
     startTime: TimeOfDay(hour: 9, minute: 0),
     endTime: TimeOfDay(hour: 10, minute: 0),
     daysOfWeek: [DateTime.tuesday, DateTime.thursday],
@@ -54,7 +57,10 @@ const double mockUserLongitude = -84.5182;
 // Class location coordinates
 const Map<String, Map<String, double>> classLocations = {
   'physics2': {'lat': 39.1272, 'lon': -84.5182}, // Braunstein 300 - IN LOCATION
-  'physics3': {'lat': 39.1250, 'lon': -84.5200}, // Braunstein 400 - OUT OF LOCATION
+  'physics3': {
+    'lat': 39.1250,
+    'lon': -84.5200
+  }, // Braunstein 400 - OUT OF LOCATION
   'calc1': {'lat': 39.1300, 'lon': -84.5100}, // Old Main 101 - OUT OF LOCATION
 };
 

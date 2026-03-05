@@ -6,6 +6,8 @@
     <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need your location to provide location-based services.</string>
     <key>CFBundleDisplayName</key>
     <string>Attendin</string>
     <key>CFBundleExecutable</key>

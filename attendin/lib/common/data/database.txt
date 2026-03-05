@@ -23,6 +23,7 @@
     "adminId": "user_sys_9a8b7c",
     "name": "Physics II",
     "location": "Baldwin Hall 304",
+    "locationId": "baldwin"
 
     "start_time_minutes": 600, 
     "end_time_minutes": 690,
