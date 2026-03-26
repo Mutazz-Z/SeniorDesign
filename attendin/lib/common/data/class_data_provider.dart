@@ -45,6 +45,7 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_fri'] ?? false) DateTime.friday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -89,6 +90,7 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_fri'] ?? false) DateTime.friday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -130,6 +132,7 @@ class ClassDataProvider extends ChangeNotifier {
         'is_fri': days.contains(DateTime.friday),
         'is_sat': days.contains(DateTime.saturday),
         'is_sun': days.contains(DateTime.sunday),
+        'attendanceWindowMinutes': newClass.attendanceWindowMinutes,
       });
 
       // Refresh the list immediately
@@ -165,6 +168,7 @@ class ClassDataProvider extends ChangeNotifier {
         'is_wed': days.contains(DateTime.wednesday),
         'is_thu': days.contains(DateTime.thursday),
         'is_fri': days.contains(DateTime.friday),
+        'attendanceWindowMinutes': updatedClass.attendanceWindowMinutes,
       });
 
       // Refresh list

@@ -74,6 +74,7 @@ class ClassInfo {
     TimeOfDay? endTime,
     List<int>? daysOfWeek,
     bool? isActive,
+    int? attendanceWindowMinutes,
     String? adminId,
   }) {
     return ClassInfo(
@@ -85,6 +86,8 @@ class ClassInfo {
       endTime: endTime ?? this.endTime,
       daysOfWeek: daysOfWeek ?? this.daysOfWeek,
       isActive: isActive ?? this.isActive,
+      attendanceWindowMinutes:
+          attendanceWindowMinutes ?? this.attendanceWindowMinutes,
       adminId: adminId ?? this.adminId,
     );
   }

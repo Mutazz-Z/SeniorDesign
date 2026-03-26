@@ -30,7 +30,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // We keep track of the ID to know when to switch streams
   String _trackedSessionId = "";
 
-  Timer? _sessionCheckTimer;
   String _todayDateString = "";
   List<ClassStudent> _enrolledStudents = [];
   Stream<QuerySnapshot>? _attendanceStream;
@@ -39,11 +38,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _updateDateString();
-
-    // Timer just forces a rebuild every minute to check time-based logic
-    _sessionCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) setState(() {});
-    });
 
     // Initial fetch of classes if needed
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -55,12 +49,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         classProvider.fetchClassesForAdmin(userProvider.uid);
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _sessionCheckTimer?.cancel();
-    super.dispose();
   }
 
   void _updateDateString() {
@@ -224,9 +212,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             currentSession, // Updated Info
                                         presentStudents: presentList.length,
                                         totalStudents: _enrolledStudents.length,
-                                        timeLeftForAttendance:
-                                            getAttendanceWindowLeft(
-                                                currentSession, now),
                                       ),
                                       const SizedBox(height: 24),
                                       Expanded(
@@ -296,6 +281,7 @@ ClassInfo? findCurrentSession(
       final nowMinutes = now.hour * 60 + now.minute;
       final startMinutes = c.startTime.hour * 60 + c.startTime.minute;
       final endMinutes = c.endTime.hour * 60 + c.endTime.minute;
+      final attendanceWindowMinutes = c.attendanceWindowMinutes;
       return nowMinutes >= startMinutes && nowMinutes < endMinutes;
     });
   } catch (e) {
@@ -304,8 +290,10 @@ ClassInfo? findCurrentSession(
 }
 
 Duration getAttendanceWindowLeft(ClassInfo session, DateTime now) {
-  final endMinutes = session.endTime.hour * 60 + session.endTime.minute;
+  final startMinutes = session.startTime.hour * 60 + session.startTime.minute;
+  final attendanceWindowEndMinutes =
+      startMinutes + session.attendanceWindowMinutes;
   final nowMinutes = now.hour * 60 + now.minute;
-  final minutesLeft = endMinutes - nowMinutes;
+  final minutesLeft = attendanceWindowEndMinutes - nowMinutes;
   return Duration(minutes: minutesLeft > 0 ? minutesLeft : 0);
 }
