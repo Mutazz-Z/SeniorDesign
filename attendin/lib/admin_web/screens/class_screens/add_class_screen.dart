@@ -77,7 +77,7 @@ class _AddClassScreenState extends State<AddClassScreen> {
   }
 
   String generateLocationId(String location) {
-    return location.replaceAll(RegExp(r'[0-9]'), '').toLowerCase();
+    return location.replaceAll(RegExp(r'[0-9\s]'), '').toLowerCase();
   }
 
   @override
