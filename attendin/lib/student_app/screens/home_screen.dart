@@ -100,6 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await enrollmentProvider.fetchClassIdsForStudent(userProvider.uid);
     await classProvider.fetchClassesByIds(
         enrollmentProvider.studentClassIds); // Always fetch fresh data
+
+    _updateCurrentClassAndAttendance();
     setState(() {});
   }
 
@@ -136,16 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       if (classCurrentlyInSession != null) {
         _currentClass = classCurrentlyInSession;
-        if (_currentAttendanceStatus != AttendanceStatus.attended &&
-            _currentAttendanceStatus != AttendanceStatus.missed) {
-          _currentAttendanceStatus = AttendanceStatus.markAttendance;
+        if (_currentAttendanceStatus != AttendanceStatus.attended) {
+          if (_attendanceWindowHasPassed(classCurrentlyInSession)) {
+            _currentAttendanceStatus = AttendanceStatus.missed;
+          }
         }
       } else if (nextUpcomingClass != null) {
         _currentClass = nextUpcomingClass;
-        if (_currentAttendanceStatus != AttendanceStatus.attended &&
-            _currentAttendanceStatus != AttendanceStatus.missed) {
-          _currentAttendanceStatus = AttendanceStatus.markAttendance;
-        }
+        _currentAttendanceStatus = AttendanceStatus.markAttendance;
       } else {
         _currentClass = null;
         _currentAttendanceStatus = AttendanceStatus.markAttendance;
@@ -159,10 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
       detectedClass = nextUpcomingClass;
     }
 
-    // 3. IF the class changed, or if we haven't checked the DB yet...
-    if (detectedClass != _currentClass &&
-        detectedClass != null &&
-        authUser != null) {
+    if (detectedClass != null && authUser != null) {
       // Check the Database!
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
@@ -175,6 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final statusFromDb = await attendanceProvider.checkStudentStatus(
           detectedClass.id, authUser.uid, dateString);
 
+      print(statusFromDb);
+
       // Update UI with the Real DB Status
       if (mounted) {
         setState(() {
@@ -182,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (statusFromDb == 'present') {
             _currentAttendanceStatus = AttendanceStatus.attended;
-          } else if (statusFromDb == 'absent') {
+          } else if (_attendanceWindowHasPassed(detectedClass!)) {
             _currentAttendanceStatus = AttendanceStatus.missed;
           } else {
             _currentAttendanceStatus = AttendanceStatus.markAttendance;
@@ -215,6 +214,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isUserInLocation() {
     return _mockUserInLocation;
+  }
+
+  bool _attendanceWindowHasPassed(ClassInfo cls) {
+    final now = DateTime.now();
+    final start = DateTime(
+        now.year, now.month, now.day, cls.startTime.hour, cls.startTime.minute);
+    final attendanceWindowEnd =
+        start.add(Duration(minutes: cls.attendanceWindowMinutes));
+    return now.isAfter(attendanceWindowEnd);
   }
 
   Future<void> _markAttendance() async {
@@ -301,11 +309,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  "You are ${distance.round()}m away. Must be within ${radius.round()}m.")),
+                  "You are ${distance.round()}m away. Must be within ${radius.round()}m."),
+              duration: const Duration(seconds: 3)),
         );
 
-        // Wait 5 seconds then reset to allow trying again
-        await Future.delayed(const Duration(seconds: 5));
+        // Wait 3 seconds then reset to allow trying again
+        await Future.delayed(const Duration(seconds: 3));
 
         if (mounted) {
           setState(() {
