@@ -14,6 +14,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendin/common/data/attendance_data_provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
 
+import 'package:csv/csv.dart';
+import 'dart:convert';
+import 'package:web/web.dart' as web;
+
 import 'package:flutter/material.dart';
 
 class SelectedClassScreen extends StatefulWidget {
@@ -200,6 +204,109 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
       ),
     );
     overlay.insert(_overlayEntry!);
+  }
+
+  Future<void> _generateAndDownloadCsv(List<ClassStudent> students) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Generating CSV...')),
+    );
+
+    final provider = Provider.of<AttendanceProvider>(context, listen: false);
+
+    // 1. Gather all attendance data and find all unique dates
+    Map<String, Map<String, dynamic>> allStudentRecords = {};
+    Set<String> uniqueDates = {};
+
+    for (var student in students) {
+      final history = await provider.fetchStudentAttendanceHistory(
+          widget.classInfo.id, student.id);
+      allStudentRecords[student.id] = history;
+      uniqueDates.addAll(history.keys);
+    }
+
+    // Sort dates chronologically
+    List<String> sortedDates = uniqueDates.toList()..sort();
+
+    // 2. Prepare CSV Data Matrix
+    List<List<dynamic>> csvData = [];
+
+    // Header Row
+    csvData.add([
+      'Student ID',
+      'Student Name',
+      'Total Present',
+      'Total Missed',
+      'Percentage',
+      ...sortedDates
+    ]);
+
+    // 3. Build each Student's Row
+// 3. Build each Student's Row
+    int totalClassesHeld = sortedDates.length;
+
+    for (var student in students) {
+      final history = allStudentRecords[student.id] ?? {};
+
+      int presentCount = 0;
+      int excusedCount = 0;
+      int explicitAbsentCount =
+          0; // For when teachers manually mark them absent
+
+      // Count what we actually have in the database
+      for (var status in history.values) {
+        if (status == 'present') presentCount++;
+        if (status == 'excused') excusedCount++;
+        if (status == 'absent') explicitAbsentCount++;
+      }
+
+      // The magic math: Missed is the total classes minus the times they were there or excused
+      int totalMissed = totalClassesHeld - presentCount - excusedCount;
+
+      String percentage = totalClassesHeld == 0
+          ? "N/A"
+          : "${((presentCount / totalClassesHeld) * 100).toStringAsFixed(1)}%";
+
+      List<dynamic> row = [
+        student.schoolId,
+        student.name,
+        presentCount,
+        totalMissed,
+        percentage,
+      ];
+
+      // Fill in the daily columns
+      for (var date in sortedDates) {
+        final status = history[date];
+
+        if (status == 'present') {
+          row.add('Present');
+        } else if (status == 'excused') {
+          row.add('Excused');
+        } else if (status == 'absent') {
+          row.add('Absent'); // Manually marked absent
+        } else {
+          // IMPLICIT ABSENT: No record exists for this day!
+          row.add('Absent');
+        }
+      }
+
+      csvData.add(row);
+    }
+
+    // 4. Convert to CSV String and then to Base64
+    String csvString = const ListToCsvConverter().convert(csvData);
+    final bytes = utf8.encode(csvString);
+    final base64String = base64Encode(bytes);
+
+    // 5. Trigger Web Download (Using modern package:web)
+    final anchor = web.HTMLAnchorElement()
+      ..href = 'data:text/csv;charset=utf-8;base64,$base64String'
+      ..download =
+          '${widget.classInfo.subject.replaceAll(' ', '_')}_Attendance.csv';
+
+    anchor.click();
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
   }
 
   Widget _buildMenu(DateTime date) {
@@ -520,7 +627,15 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
         PrimaryButton(
           label: 'Download Csv',
           backgroundColor: AppColors.of(context).primaryBlue,
-          onPressed: () {},
+          onPressed: () {
+            if (students.isNotEmpty) {
+              _generateAndDownloadCsv(students);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No students to export.')),
+              );
+            }
+          },
         )
       ],
     );
