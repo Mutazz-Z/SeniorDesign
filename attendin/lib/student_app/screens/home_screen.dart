@@ -41,7 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
   ClassInfo? _currentClass;
   Timer? _timer;
 
-  bool _mockUserInLocation = true;
+  bool _mockUserInLocation = false;
+
+  StreamSubscription<DocumentSnapshot>? _classSubscription;
+  String? _listenedClassId;
 
   late ConfettiController _confettiController;
   final GlobalKey _markAttendanceButtonKey = GlobalKey();
@@ -67,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _timer?.cancel();
     _confettiController.dispose();
+    _classSubscription?.cancel();
     super.dispose();
   }
 
@@ -86,6 +90,28 @@ class _HomeScreenState extends State<HomeScreen> {
           _buttonSize = size;
         });
       }
+    }
+  }
+
+  bool _isAttendanceWindowOpen(ClassInfo cls) {
+    final now = DateTime.now();
+    final classEnd = DateTime(
+        now.year, now.month, now.day, cls.endTime.hour, cls.endTime.minute);
+
+    if (now.isAfter(classEnd)) return false;
+
+    if (cls.attendanceMode == 'manual') {
+      return cls.isManualWindowOpen;
+    } else if (cls.attendanceMode == 'auto_end') {
+      final openTime =
+          classEnd.subtract(Duration(minutes: cls.attendanceWindowMinutes));
+      return now.isAfter(openTime) && now.isBefore(classEnd);
+    } else {
+      // Default: auto_start
+      final start = DateTime(now.year, now.month, now.day, cls.startTime.hour,
+          cls.startTime.minute);
+      final end = start.add(Duration(minutes: cls.attendanceWindowMinutes));
+      return now.isAfter(start) && now.isBefore(end);
     }
   }
 
@@ -160,6 +186,35 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (detectedClass != null && authUser != null) {
+      if (_listenedClassId != detectedClass.id) {
+        _classSubscription?.cancel();
+        _listenedClassId = detectedClass.id;
+
+        _classSubscription = FirebaseFirestore.instance
+            .collection('classes')
+            .doc(detectedClass.id)
+            .snapshots()
+            .listen((snapshot) {
+          if (snapshot.exists && mounted) {
+            final data = snapshot.data() as Map<String, dynamic>;
+
+            setState(() {
+              _currentClass = ClassInfo.fromMap(data, snapshot.id);
+
+              // 2. Instantly update the UI status if the teacher closes the window
+              if (_currentAttendanceStatus != AttendanceStatus.attended) {
+                // Notice we are using _currentClass! here, NOT detectedClass!
+                if (_attendanceWindowHasPassed(_currentClass!)) {
+                  _currentAttendanceStatus = AttendanceStatus.missed;
+                } else {
+                  _currentAttendanceStatus = AttendanceStatus.markAttendance;
+                }
+              }
+            });
+          }
+        });
+      }
+
       // Check the Database!
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
@@ -177,8 +232,6 @@ class _HomeScreenState extends State<HomeScreen> {
       // Update UI with the Real DB Status
       if (mounted) {
         setState(() {
-          _currentClass = detectedClass;
-
           if (statusFromDb == 'present') {
             _currentAttendanceStatus = AttendanceStatus.attended;
           } else if (_attendanceWindowHasPassed(detectedClass!)) {
@@ -189,6 +242,9 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } else if (detectedClass == null) {
+      _classSubscription?.cancel();
+      _listenedClassId = null;
+
       if (mounted) {
         setState(() {
           _currentClass = null;
@@ -218,17 +274,43 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _attendanceWindowHasPassed(ClassInfo cls) {
     final now = DateTime.now();
-    final start = DateTime(
-        now.year, now.month, now.day, cls.startTime.hour, cls.startTime.minute);
-    final attendanceWindowEnd =
-        start.add(Duration(minutes: cls.attendanceWindowMinutes));
-    return now.isAfter(attendanceWindowEnd);
+    final classEnd = DateTime(
+        now.year, now.month, now.day, cls.endTime.hour, cls.endTime.minute);
+
+    // If the class is completely over for the day, the window has definitely passed.
+    if (now.isAfter(classEnd)) return true;
+
+    // If it's manual or auto_end, it hasn't passed yet because it could open later in the class.
+    if (cls.attendanceMode == 'manual' || cls.attendanceMode == 'auto_end') {
+      return false;
+    } else {
+      // For auto_start, check if the initial window expired
+      final start = DateTime(now.year, now.month, now.day, cls.startTime.hour,
+          cls.startTime.minute);
+      final end = start.add(Duration(minutes: cls.attendanceWindowMinutes));
+      return now.isAfter(end);
+    }
   }
 
   Future<void> _markAttendance() async {
     if (_currentClass == null) return;
 
-    // 1. Show "Marking Attendance..." state
+    // 1. THE DOUBLE-TAP LOCK: Prevent spam-clicking while it's already processing!
+    if (_currentAttendanceStatus == AttendanceStatus.marking) return;
+
+    if (!_isAttendanceWindowOpen(_currentClass!)) {
+      ScaffoldMessenger.of(context)
+          .clearSnackBars(); // Clear old popups instantly
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("The attendance window is currently closed."),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    // Show "Marking Attendance..." state
     setState(() {
       _currentAttendanceStatus = AttendanceStatus.marking;
     });
@@ -239,7 +321,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
 
-      // 2. Fetch the target classroom location from Firestore
       final String locationId = _currentClass!.locationId;
 
       if (locationId.isEmpty) {
@@ -255,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
         throw Exception("Classroom location data is missing in the database.");
       }
 
-      // Extract the GeoPoint and Radius from the document
       final GeoPoint targetGeoPoint = locationDoc['location'];
       final double targetLat = targetGeoPoint.latitude;
       final double targetLng = targetGeoPoint.longitude;
@@ -264,14 +344,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ? (locationDoc['radius'] as num).toDouble()
           : 50.0;
 
-      // 3. Fetch the Device Location (via our LocationService)
       final userPos = await LocationService().getCurrentPosition();
 
       if (userPos == null) {
         throw Exception("Location permission denied or GPS is disabled.");
       }
 
-      // 4. Calculate Distance
       final double distance = LocationService().getDistanceInMeters(
         userPos.latitude,
         userPos.longitude,
@@ -282,20 +360,17 @@ class _HomeScreenState extends State<HomeScreen> {
       print(
           "Debug: Distance to class is ${distance.round()}m. Required: ${radius.round()}m.");
 
-      // 5. Compare Location
-      if (distance <= radius) {
+      if (distance <= radius || _isUserInLocation()) {
         // --- SUCCESS: IN RANGE ---
         setState(() {
           _currentAttendanceStatus = AttendanceStatus.attended;
         });
         _confettiController.play();
 
-        // Prepare Data for Database
         final now = DateTime.now();
         final dateString =
             "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-        // Write to Firebase
         await attendanceProvider.markPresent(
             _currentClass!.id, userProvider.uid, dateString);
         print("Attendance saved to database!");
@@ -305,7 +380,9 @@ class _HomeScreenState extends State<HomeScreen> {
           _currentAttendanceStatus = AttendanceStatus.outOfLocation;
         });
 
-        // Show a snackbar telling them exactly how far they are
+        // 2. THE QUEUE CLEARER: Instantly destroy old snackbars before showing the new one
+        ScaffoldMessenger.of(context).clearSnackBars();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
@@ -316,19 +393,22 @@ class _HomeScreenState extends State<HomeScreen> {
         // Wait 3 seconds then reset to allow trying again
         await Future.delayed(const Duration(seconds: 3));
 
-        if (mounted) {
+        // Safety check: Only reset to "markAttendance" if they are STILL in the "outOfLocation" state.
+        // (Prevents bugs if the class ended during those 3 seconds)
+        if (mounted &&
+            _currentAttendanceStatus == AttendanceStatus.outOfLocation) {
           setState(() {
             _currentAttendanceStatus = AttendanceStatus.markAttendance;
           });
         }
       }
     } catch (e) {
-      // --- ERROR HANDLING ---
-      // Revert button state if something crashes (like permission denied)
       if (mounted) {
         setState(() {
           _currentAttendanceStatus = AttendanceStatus.markAttendance;
         });
+
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error: $e")),
         );
@@ -434,40 +514,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: kSectionSpacing),
                   if (_currentClass != null)
-                    StreamBuilder<DocumentSnapshot>(
-                      // 1. Listen specifically to the CURRENT class document
-                      stream: FirebaseFirestore.instance
-                          .collection('classes')
-                          .doc(_currentClass!.id)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        // 2. If we have fresh data, update our local _currentClass object
-                        if (snapshot.hasData &&
-                            snapshot.data != null &&
-                            snapshot.data!.exists) {
-                          // // Update the location/time/status dynamically
-                          // _currentClass!.location =
-                          //     data['location'] ?? _currentClass!.location;
-                          // _currentClass!.isActive =
-                          //     data['is_active'] ?? _currentClass!.isActive;
-                          // // You can update other fields here too if needed
+                    ClassCard(
+                      currentClass: _currentClass,
+                      currentAttendanceStatus: _currentAttendanceStatus,
+                      onMarkAttendancePressed: _markAttendance,
+                      markAttendanceButtonKey: _markAttendanceButtonKey,
+                      onInfoIconPressed: () {
+                        if (_currentClass != null) {
+                          Navigator.push(
+                            context,
+                            customFadePageRoute(
+                                ClassDetailScreen(classInfo: _currentClass!)),
+                          );
                         }
-
-                        return ClassCard(
-                          currentClass: _currentClass,
-                          currentAttendanceStatus: _currentAttendanceStatus,
-                          onMarkAttendancePressed: _markAttendance,
-                          markAttendanceButtonKey: _markAttendanceButtonKey,
-                          onInfoIconPressed: () {
-                            if (_currentClass != null) {
-                              Navigator.push(
-                                context,
-                                customFadePageRoute(ClassDetailScreen(
-                                    classInfo: _currentClass!)),
-                              );
-                            }
-                          },
-                        );
                       },
                     )
                   else
@@ -489,11 +548,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onToggleLocation: () {
                         setState(() {
                           _mockUserInLocation = !_mockUserInLocation;
-                          if (_currentClass != null &&
-                              _currentAttendanceStatus ==
-                                  AttendanceStatus.markAttendance) {
-                            _markAttendance();
-                          }
                         });
                       },
                       mockUserInLocation: _mockUserInLocation,

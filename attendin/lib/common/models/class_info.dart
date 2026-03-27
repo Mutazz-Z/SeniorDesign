@@ -44,6 +44,37 @@ class ClassInfo {
     this.isManualWindowOpen = false,
   });
 
+  factory ClassInfo.fromMap(Map<String, dynamic> data, String docId) {
+    return ClassInfo(
+      id: docId,
+      adminId: data['adminId'] ?? '',
+      subject: data['subject'] ?? '',
+      location: data['location'] ?? '',
+      locationId: data['locationId'] ?? '',
+      startTime: TimeOfDay(
+        hour: (data['startTime'] ?? 0) ~/ 60,
+        minute: (data['startTime'] ?? 0) % 60,
+      ),
+      endTime: TimeOfDay(
+        hour: (data['endTime'] ?? 0) ~/ 60,
+        minute: (data['endTime'] ?? 0) % 60,
+      ),
+      daysOfWeek: [
+        if (data['is_mon'] ?? false) DateTime.monday,
+        if (data['is_tue'] ?? false) DateTime.tuesday,
+        if (data['is_wed'] ?? false) DateTime.wednesday,
+        if (data['is_thu'] ?? false) DateTime.thursday,
+        if (data['is_fri'] ?? false) DateTime.friday,
+        if (data['is_sat'] ?? false) DateTime.saturday,
+        if (data['is_sun'] ?? false) DateTime.sunday,
+      ],
+      isActive: data['is_active'] ?? true,
+      attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 10,
+      attendanceMode: data['attendanceMode'] ?? 'auto_start',
+      isManualWindowOpen: data['isManualWindowOpen'] ?? false,
+    );
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
