@@ -13,6 +13,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 
 class DashboardScreen extends StatefulWidget {
   final bool isSmallScreen;
@@ -33,11 +35,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _todayDateString = "";
   List<ClassStudent> _enrolledStudents = [];
   Stream<QuerySnapshot>? _attendanceStream;
+  JSFunction? _unloadListener;
 
   @override
   void initState() {
     super.initState();
     _updateDateString();
+
+    _unloadListener = () {
+      if (_trackedSessionId.isNotEmpty) {
+        // We fire this off and hope the browser lets it escape before dying
+        FirebaseFirestore.instance
+            .collection('classes')
+            .doc(_trackedSessionId)
+            .update({'isManualWindowOpen': false});
+      }
+    }.toJS; // .toJS translates it for the browser
+
+    // 2. Attach it to the Chrome window
+    web.window.addEventListener('unload', _unloadListener!);
 
     // Initial fetch of classes if needed
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -49,6 +65,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         classProvider.fetchClassesForAdmin(userProvider.uid);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    if (_unloadListener != null) {
+      web.window.removeEventListener('unload', _unloadListener!);
+    }
+
+    if (_trackedSessionId.isNotEmpty) {
+      FirebaseFirestore.instance
+          .collection('classes')
+          .doc(_trackedSessionId)
+          .update({'isManualWindowOpen': false});
+    }
+    super.dispose();
   }
 
   void _updateDateString() {
@@ -107,6 +138,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       await attendanceProvider.markAbsent(
           _trackedSessionId, student.id, _todayDateString);
+    }
+  }
+
+  Future<void> _updateManualWindowState(String classId, bool isOpen) async {
+    final classProvider =
+        Provider.of<ClassDataProvider>(context, listen: false);
+
+    classProvider.updateManualWindowLocally(classId, isOpen);
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'isManualWindowOpen': isOpen});
+    } catch (e) {
+      classProvider.updateManualWindowLocally(classId, !isOpen);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to open attendance. Check connection.')),
+        );
+      }
     }
   }
 
@@ -212,6 +266,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             currentSession, // Updated Info
                                         presentStudents: presentList.length,
                                         totalStudents: _enrolledStudents.length,
+                                        onManualToggle: (bool isOpen) {
+                                          _updateManualWindowState(
+                                              currentSession.id, isOpen);
+                                        },
                                       ),
                                       const SizedBox(height: 24),
                                       Expanded(
@@ -287,13 +345,4 @@ ClassInfo? findCurrentSession(
   } catch (e) {
     return null;
   }
-}
-
-Duration getAttendanceWindowLeft(ClassInfo session, DateTime now) {
-  final startMinutes = session.startTime.hour * 60 + session.startTime.minute;
-  final attendanceWindowEndMinutes =
-      startMinutes + session.attendanceWindowMinutes;
-  final nowMinutes = now.hour * 60 + now.minute;
-  final minutesLeft = attendanceWindowEndMinutes - nowMinutes;
-  return Duration(minutes: minutesLeft > 0 ? minutesLeft : 0);
 }

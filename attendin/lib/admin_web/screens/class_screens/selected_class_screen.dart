@@ -471,6 +471,43 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
     );
   }
 
+  Widget _buildAttendanceModeToggle(BuildContext context) {
+    final classProvider = Provider.of<ClassDataProvider>(context);
+    final updatedClass = classProvider.classes.firstWhere(
+      (c) => c.id == widget.classInfo.id,
+      orElse: () => widget.classInfo,
+    );
+    final currentMode = updatedClass.attendanceMode;
+
+    final modes = ['auto_start', 'manual', 'auto_end'];
+    final labels = ['Auto Start', 'Manual', 'Auto End'];
+
+    return ToggleButtons(
+      isSelected: modes.map((m) => m == currentMode).toList(),
+      onPressed: (index) async {
+        final newMode = modes[index];
+        if (newMode != currentMode) {
+          await classProvider.setClassAttendanceMode(
+              widget.classInfo.id, newMode);
+
+          if (newMode != 'manual') {
+            await FirebaseFirestore.instance
+                .collection('classes')
+                .doc(widget.classInfo.id)
+                .update({'isManualWindowOpen': false});
+            classProvider.updateManualWindowLocally(widget.classInfo.id, false);
+          }
+        }
+      },
+      children: labels
+          .map((label) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(label),
+              ))
+          .toList(),
+    );
+  }
+
   Future<void> _removeStudentFromClass(
       ClassStudent studentToRemove, List<ClassStudent> students) async {
     // Find enrollment document for this class and student
@@ -706,6 +743,8 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
             ],
           ),
         ),
+        _buildAttendanceModeToggle(context),
+        const SizedBox(width: 16),
         InkWell(
           customBorder: const CircleBorder(),
           child: FloatingActionButton(

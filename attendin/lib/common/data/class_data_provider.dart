@@ -46,6 +46,7 @@ class ClassDataProvider extends ChangeNotifier {
           ],
           isActive: data['is_active'] ?? true,
           attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
+          attendanceMode: data['attendanceMode'] ?? 'auto_start',
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -91,6 +92,7 @@ class ClassDataProvider extends ChangeNotifier {
           ],
           isActive: data['is_active'] ?? true,
           attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
+          attendanceMode: data['attendanceMode'] ?? 'auto_start',
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -169,6 +171,8 @@ class ClassDataProvider extends ChangeNotifier {
         'is_thu': days.contains(DateTime.thursday),
         'is_fri': days.contains(DateTime.friday),
         'attendanceWindowMinutes': updatedClass.attendanceWindowMinutes,
+        'attendanceMode': updatedClass.attendanceMode,
+        'isManualWindowOpen': updatedClass.isManualWindowOpen,
       });
 
       // Refresh list
@@ -198,6 +202,36 @@ class ClassDataProvider extends ChangeNotifier {
       }
     } catch (e) {
       print("Error updating class active status: $e");
+    }
+  }
+
+  Future<void> setClassAttendanceMode(
+      String classId, String attendanceMode) async {
+    try {
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'attendanceMode': attendanceMode});
+
+      // Update local cache
+      final index = classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        final oldClass = classes[index];
+        classes[index] = oldClass.copyWith(attendanceMode: attendanceMode);
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating class attendance mode: $e");
+    }
+  }
+
+  void updateManualWindowLocally(String classId, bool isOpen) {
+    final index = classes.indexWhere((c) => c.id == classId);
+
+    if (index != -1) {
+      classes[index] = classes[index].copyWith(isManualWindowOpen: isOpen);
+      notifyListeners();
     }
   }
 

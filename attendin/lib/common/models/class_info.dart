@@ -26,6 +26,8 @@ class ClassInfo {
   final List<int> daysOfWeek; // class_days_of_week
   final bool isActive; // is_class_active
   final int attendanceWindowMinutes; // attendance_window_minutes
+  final String attendanceMode;
+  final bool isManualWindowOpen;
 
   const ClassInfo({
     required this.id,
@@ -38,6 +40,8 @@ class ClassInfo {
     required this.daysOfWeek,
     this.isActive = true,
     this.attendanceWindowMinutes = 10,
+    this.attendanceMode = 'auto_start',
+    this.isManualWindowOpen = false,
   });
 
   @override
@@ -52,7 +56,9 @@ class ClassInfo {
           startTime == other.startTime &&
           endTime == other.endTime &&
           listEquals(daysOfWeek, other.daysOfWeek) &&
-          attendanceWindowMinutes == other.attendanceWindowMinutes;
+          attendanceWindowMinutes == other.attendanceWindowMinutes &&
+          attendanceMode == other.attendanceMode &&
+          isManualWindowOpen == other.isManualWindowOpen;
 
   @override
   int get hashCode =>
@@ -63,7 +69,9 @@ class ClassInfo {
       startTime.hashCode ^
       endTime.hashCode ^
       daysOfWeek.hashCode ^
-      attendanceWindowMinutes.hashCode;
+      attendanceWindowMinutes.hashCode ^
+      attendanceMode.hashCode ^
+      isManualWindowOpen.hashCode;
 
   ClassInfo copyWith({
     String? id,
@@ -76,6 +84,8 @@ class ClassInfo {
     bool? isActive,
     int? attendanceWindowMinutes,
     String? adminId,
+    String? attendanceMode,
+    bool? isManualWindowOpen,
   }) {
     return ClassInfo(
       id: id ?? this.id,
@@ -89,6 +99,8 @@ class ClassInfo {
       attendanceWindowMinutes:
           attendanceWindowMinutes ?? this.attendanceWindowMinutes,
       adminId: adminId ?? this.adminId,
+      attendanceMode: attendanceMode ?? this.attendanceMode,
+      isManualWindowOpen: isManualWindowOpen ?? this.isManualWindowOpen,
     );
   }
 }
