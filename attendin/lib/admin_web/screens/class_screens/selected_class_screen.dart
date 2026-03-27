@@ -235,6 +235,7 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
       'Student ID',
       'Student Name',
       'Total Present',
+      'Total Excused',
       'Total Missed',
       'Percentage',
       ...sortedDates
@@ -264,12 +265,13 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
 
       String percentage = totalClassesHeld == 0
           ? "N/A"
-          : "${((presentCount / totalClassesHeld) * 100).toStringAsFixed(1)}%";
+          : "${(((presentCount + excusedCount) / totalClassesHeld) * 100).toStringAsFixed(1)}%";
 
       List<dynamic> row = [
         student.schoolId,
         student.name,
         presentCount,
+        excusedCount,
         totalMissed,
         percentage,
       ];
