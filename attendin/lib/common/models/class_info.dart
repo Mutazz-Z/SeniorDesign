@@ -20,6 +20,7 @@ class ClassInfo {
   final String adminId; // admin_uid
   final String subject; // class_name
   final String location; // class_location
+  final String locationId; // class_location_id
   final TimeOfDay startTime; // class_start_time_in_minutes
   final TimeOfDay endTime; // class_end_time_in_minutes
   final List<int> daysOfWeek; // class_days_of_week
@@ -31,6 +32,7 @@ class ClassInfo {
     required this.adminId,
     required this.subject,
     required this.location,
+    required this.locationId,
     required this.startTime,
     required this.endTime,
     required this.daysOfWeek,
@@ -46,6 +48,7 @@ class ClassInfo {
           id == other.id &&
           subject == other.subject &&
           location == other.location &&
+          locationId == other.locationId &&
           startTime == other.startTime &&
           endTime == other.endTime &&
           listEquals(daysOfWeek, other.daysOfWeek) &&
@@ -56,10 +59,38 @@ class ClassInfo {
       id.hashCode ^
       subject.hashCode ^
       location.hashCode ^
+      locationId.hashCode ^
       startTime.hashCode ^
       endTime.hashCode ^
       daysOfWeek.hashCode ^
       attendanceWindowMinutes.hashCode;
+
+  ClassInfo copyWith({
+    String? id,
+    String? subject,
+    String? location,
+    String? locationId,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    List<int>? daysOfWeek,
+    bool? isActive,
+    int? attendanceWindowMinutes,
+    String? adminId,
+  }) {
+    return ClassInfo(
+      id: id ?? this.id,
+      subject: subject ?? this.subject,
+      location: location ?? this.location,
+      locationId: locationId ?? this.locationId,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      isActive: isActive ?? this.isActive,
+      attendanceWindowMinutes:
+          attendanceWindowMinutes ?? this.attendanceWindowMinutes,
+      adminId: adminId ?? this.adminId,
+    );
+  }
 }
 
 class ClassStudent {

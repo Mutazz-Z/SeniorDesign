@@ -3,19 +3,18 @@ import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/utils/date_time_utils.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 class CurrentSessionCard extends StatefulWidget {
   final ClassInfo? sessionInfo;
   final int presentStudents;
   final int totalStudents;
-  final Duration timeLeftForAttendance;
 
   const CurrentSessionCard({
     super.key,
     required this.sessionInfo,
     required this.presentStudents,
     required this.totalStudents,
-    required this.timeLeftForAttendance,
   });
 
   @override
@@ -23,6 +22,38 @@ class CurrentSessionCard extends StatefulWidget {
 }
 
 class _CurrentSessionCardState extends State<CurrentSessionCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Duration _getTimeLeft() {
+    if (widget.sessionInfo == null) return Duration.zero;
+    final now = DateTime.now();
+    final start = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.sessionInfo!.startTime.hour,
+      widget.sessionInfo!.startTime.minute,
+    );
+    final attendanceWindowEnd = start
+        .add(Duration(minutes: widget.sessionInfo!.attendanceWindowMinutes));
+    final timeLeft = attendanceWindowEnd.difference(now);
+    return timeLeft.isNegative ? Duration.zero : timeLeft;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppColorScheme colors = AppColors.of(context);
@@ -38,7 +69,7 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
     final Color progressBarColor =
         getAttendanceColor(attendancePercentage, colors);
 
-    final String timeLeftString = formatDuration(widget.timeLeftForAttendance);
+    final String timeLeftString = formatDuration(_getTimeLeft());
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -121,7 +152,7 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
     String message;
     IconData icon;
 
-    if (widget.timeLeftForAttendance.inSeconds > 0) {
+    if (_getTimeLeft().inSeconds > 0) {
       chipColor = colors.accentGreen.withAlpha(26);
       iconColor = colors.accentGreen;
       icon = Icons.access_time;

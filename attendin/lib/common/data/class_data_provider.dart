@@ -28,6 +28,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
@@ -44,6 +45,7 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_fri'] ?? false) DateTime.friday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -71,6 +73,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
@@ -87,6 +90,7 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_fri'] ?? false) DateTime.friday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -115,6 +119,7 @@ class ClassDataProvider extends ChangeNotifier {
         'adminId': newClass.adminId,
         'subject': newClass.subject,
         'location': newClass.location,
+        'locationId': newClass.locationId,
         'startTime': newClass.startTime.hour * 60 +
             newClass.startTime.minute, // Store as minutes from midnight
         'endTime': newClass.endTime.hour * 60 + newClass.endTime.minute,
@@ -127,6 +132,7 @@ class ClassDataProvider extends ChangeNotifier {
         'is_fri': days.contains(DateTime.friday),
         'is_sat': days.contains(DateTime.saturday),
         'is_sun': days.contains(DateTime.sunday),
+        'attendanceWindowMinutes': newClass.attendanceWindowMinutes,
       });
 
       // Refresh the list immediately
@@ -153,6 +159,7 @@ class ClassDataProvider extends ChangeNotifier {
           .update({
         'subject': updatedClass.subject,
         'location': updatedClass.location,
+        'locationId': updatedClass.locationId,
         'startTime':
             updatedClass.startTime.hour * 60 + updatedClass.startTime.minute,
         'endTime': updatedClass.endTime.hour * 60 + updatedClass.endTime.minute,
@@ -161,6 +168,7 @@ class ClassDataProvider extends ChangeNotifier {
         'is_wed': days.contains(DateTime.wednesday),
         'is_thu': days.contains(DateTime.thursday),
         'is_fri': days.contains(DateTime.friday),
+        'attendanceWindowMinutes': updatedClass.attendanceWindowMinutes,
       });
 
       // Refresh list
@@ -171,6 +179,26 @@ class ClassDataProvider extends ChangeNotifier {
 
     loading = false;
     notifyListeners();
+  }
+
+  Future<void> setClassActiveStatus(String classId, bool isActive) async {
+    try {
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'is_active': isActive});
+
+      // Update local cache
+      final index = classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        final oldClass = classes[index];
+        classes[index] = oldClass.copyWith(isActive: isActive);
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating class active status: $e");
+    }
   }
 
   void clearData() {

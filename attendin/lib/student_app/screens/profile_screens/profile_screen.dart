@@ -56,8 +56,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
       print('Image selected: ${imageFile.name}');
 
-      // TODO: Add image upload logic here
-
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text(

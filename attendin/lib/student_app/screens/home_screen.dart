@@ -11,6 +11,7 @@ import 'package:attendin/student_app/screens/schedule_screens/class_details_scre
 import 'package:attendin/common/utils/app_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:attendin/common/data/attendance_data_provider.dart';
+import 'package:attendin/common/services/location_service.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -99,6 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
     await enrollmentProvider.fetchClassIdsForStudent(userProvider.uid);
     await classProvider.fetchClassesByIds(
         enrollmentProvider.studentClassIds); // Always fetch fresh data
+
+    _updateCurrentClassAndAttendance();
     setState(() {});
   }
 
@@ -135,16 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       if (classCurrentlyInSession != null) {
         _currentClass = classCurrentlyInSession;
-        if (_currentAttendanceStatus != AttendanceStatus.attended &&
-            _currentAttendanceStatus != AttendanceStatus.missed) {
-          _currentAttendanceStatus = AttendanceStatus.markAttendance;
+        if (_currentAttendanceStatus != AttendanceStatus.attended) {
+          if (_attendanceWindowHasPassed(classCurrentlyInSession)) {
+            _currentAttendanceStatus = AttendanceStatus.missed;
+          }
         }
       } else if (nextUpcomingClass != null) {
         _currentClass = nextUpcomingClass;
-        if (_currentAttendanceStatus != AttendanceStatus.attended &&
-            _currentAttendanceStatus != AttendanceStatus.missed) {
-          _currentAttendanceStatus = AttendanceStatus.markAttendance;
-        }
+        _currentAttendanceStatus = AttendanceStatus.markAttendance;
       } else {
         _currentClass = null;
         _currentAttendanceStatus = AttendanceStatus.markAttendance;
@@ -158,10 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
       detectedClass = nextUpcomingClass;
     }
 
-    // 3. IF the class changed, or if we haven't checked the DB yet...
-    if (detectedClass != _currentClass &&
-        detectedClass != null &&
-        authUser != null) {
+    if (detectedClass != null && authUser != null) {
       // Check the Database!
       final attendanceProvider =
           Provider.of<AttendanceProvider>(context, listen: false);
@@ -174,6 +172,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final statusFromDb = await attendanceProvider.checkStudentStatus(
           detectedClass.id, authUser.uid, dateString);
 
+      print(statusFromDb);
+
       // Update UI with the Real DB Status
       if (mounted) {
         setState(() {
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (statusFromDb == 'present') {
             _currentAttendanceStatus = AttendanceStatus.attended;
-          } else if (statusFromDb == 'absent') {
+          } else if (_attendanceWindowHasPassed(detectedClass!)) {
             _currentAttendanceStatus = AttendanceStatus.missed;
           } else {
             _currentAttendanceStatus = AttendanceStatus.markAttendance;
@@ -216,60 +216,122 @@ class _HomeScreenState extends State<HomeScreen> {
     return _mockUserInLocation;
   }
 
+  bool _attendanceWindowHasPassed(ClassInfo cls) {
+    final now = DateTime.now();
+    final start = DateTime(
+        now.year, now.month, now.day, cls.startTime.hour, cls.startTime.minute);
+    final attendanceWindowEnd =
+        start.add(Duration(minutes: cls.attendanceWindowMinutes));
+    return now.isAfter(attendanceWindowEnd);
+  }
+
   Future<void> _markAttendance() async {
     if (_currentClass == null) return;
 
-    // Show "Marking Attendance..." state
+    // 1. Show "Marking Attendance..." state
     setState(() {
       _currentAttendanceStatus = AttendanceStatus.marking;
     });
 
-    // Simulate getting location (add small delay to mimic real location fetch)
-    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      final userProvider =
+          Provider.of<UserDataProvider>(context, listen: false);
+      final attendanceProvider =
+          Provider.of<AttendanceProvider>(context, listen: false);
 
-    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
-    final attendanceProvider =
-        Provider.of<AttendanceProvider>(context, listen: false);
+      // 2. Fetch the target classroom location from Firestore
+      final String locationId = _currentClass!.locationId;
 
-    // Check Location using mock data
-    if (_isUserInLocation()) {
-      // User is in location - mark as attended
-      setState(() {
-        _currentAttendanceStatus = AttendanceStatus.attended;
-      });
-      _confettiController.play();
+      if (locationId.isEmpty) {
+        throw Exception("This class does not have an assigned location.");
+      }
 
-      // Prepare Data for Database
-      final now = DateTime.now();
-      final dateString =
-          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final locationDoc = await FirebaseFirestore.instance
+          .collection('location')
+          .doc(locationId)
+          .get();
 
-      try {
+      if (!locationDoc.exists) {
+        throw Exception("Classroom location data is missing in the database.");
+      }
+
+      // Extract the GeoPoint and Radius from the document
+      final GeoPoint targetGeoPoint = locationDoc['location'];
+      final double targetLat = targetGeoPoint.latitude;
+      final double targetLng = targetGeoPoint.longitude;
+
+      final double radius = locationDoc.data()!.containsKey('radius')
+          ? (locationDoc['radius'] as num).toDouble()
+          : 50.0;
+
+      // 3. Fetch the Device Location (via our LocationService)
+      final userPos = await LocationService().getCurrentPosition();
+
+      if (userPos == null) {
+        throw Exception("Location permission denied or GPS is disabled.");
+      }
+
+      // 4. Calculate Distance
+      final double distance = LocationService().getDistanceInMeters(
+        userPos.latitude,
+        userPos.longitude,
+        targetLat,
+        targetLng,
+      );
+
+      print(
+          "Debug: Distance to class is ${distance.round()}m. Required: ${radius.round()}m.");
+
+      // 5. Compare Location
+      if (distance <= radius) {
+        // --- SUCCESS: IN RANGE ---
+        setState(() {
+          _currentAttendanceStatus = AttendanceStatus.attended;
+        });
+        _confettiController.play();
+
+        // Prepare Data for Database
+        final now = DateTime.now();
+        final dateString =
+            "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
         // Write to Firebase
         await attendanceProvider.markPresent(
             _currentClass!.id, userProvider.uid, dateString);
         print("Attendance saved to database!");
-      } catch (e) {
+      } else {
+        // --- FAILURE: OUT OF RANGE ---
         setState(() {
-          _currentAttendanceStatus = AttendanceStatus.markAttendance;
+          _currentAttendanceStatus = AttendanceStatus.outOfLocation;
         });
+
+        // Show a snackbar telling them exactly how far they are
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error saving attendance: $e")),
+          SnackBar(
+              content: Text(
+                  "You are ${distance.round()}m away. Must be within ${radius.round()}m."),
+              duration: const Duration(seconds: 3)),
         );
+
+        // Wait 3 seconds then reset to allow trying again
+        await Future.delayed(const Duration(seconds: 3));
+
+        if (mounted) {
+          setState(() {
+            _currentAttendanceStatus = AttendanceStatus.markAttendance;
+          });
+        }
       }
-    } else {
-      // User is out of location - show "Out of Location" for 5 seconds
-      setState(() {
-        _currentAttendanceStatus = AttendanceStatus.outOfLocation;
-      });
-
-      // Wait 5 seconds then reset to allow trying again
-      await Future.delayed(const Duration(seconds: 5));
-
+    } catch (e) {
+      // --- ERROR HANDLING ---
+      // Revert button state if something crashes (like permission denied)
       if (mounted) {
         setState(() {
           _currentAttendanceStatus = AttendanceStatus.markAttendance;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: $e")),
+        );
       }
     }
   }
@@ -373,23 +435,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: kSectionSpacing),
                   if (_currentClass != null)
                     StreamBuilder<DocumentSnapshot>(
-                        // 1. Listen specifically to the CURRENT class document
+                      // 1. Listen specifically to the CURRENT class document
                       stream: FirebaseFirestore.instance
                           .collection('classes')
                           .doc(_currentClass!.id)
                           .snapshots(),
                       builder: (context, snapshot) {
-                          // 2. If we have fresh data, update our local _currentClass object
+                        // 2. If we have fresh data, update our local _currentClass object
                         if (snapshot.hasData &&
                             snapshot.data != null &&
                             snapshot.data!.exists) {
-
-                            // // Update the location/time/status dynamically
-                            // _currentClass!.location =
-                            //     data['location'] ?? _currentClass!.location;
-                            // _currentClass!.isActive =
-                            //     data['is_active'] ?? _currentClass!.isActive;
-                            // // You can update other fields here too if needed
+                          // // Update the location/time/status dynamically
+                          // _currentClass!.location =
+                          //     data['location'] ?? _currentClass!.location;
+                          // _currentClass!.isActive =
+                          //     data['is_active'] ?? _currentClass!.isActive;
+                          // // You can update other fields here too if needed
                         }
 
                         return ClassCard(
@@ -418,40 +479,41 @@ class _HomeScreenState extends State<HomeScreen> {
                       onInfoIconPressed: () {},
                     ),
                   const SizedBox(height: kSectionSpacing),
-                  MockAttendanceControls(
-                    onStatusChanged: (status) {
-                      setState(() {
-                        _currentAttendanceStatus = status;
-                      });
-                    },
-                    onToggleLocation: () {
-                      setState(() {
-                        _mockUserInLocation = !_mockUserInLocation;
-                        if (_currentClass != null &&
-                            _currentAttendanceStatus ==
-                                AttendanceStatus.markAttendance) {
-                          _markAttendance();
-                        }
-                      });
-                    },
-                    mockUserInLocation: _mockUserInLocation,
-                    onNoClass: () {
-                      setState(() {
-                        _currentClass = null;
-                        _currentAttendanceStatus =
-                            AttendanceStatus.markAttendance;
-                      });
-                    },
-                    onMarkAttendanceSet: () {
-                      setState(() {
-                        _currentClass = studentClasses.isNotEmpty
-                            ? studentClasses.first
-                            : null;
-                        _currentAttendanceStatus =
-                            AttendanceStatus.markAttendance;
-                      });
-                    },
-                  ),
+                  if (true) // For removing the mock controls easily
+                    MockAttendanceControls(
+                      onStatusChanged: (status) {
+                        setState(() {
+                          _currentAttendanceStatus = status;
+                        });
+                      },
+                      onToggleLocation: () {
+                        setState(() {
+                          _mockUserInLocation = !_mockUserInLocation;
+                          if (_currentClass != null &&
+                              _currentAttendanceStatus ==
+                                  AttendanceStatus.markAttendance) {
+                            _markAttendance();
+                          }
+                        });
+                      },
+                      mockUserInLocation: _mockUserInLocation,
+                      onNoClass: () {
+                        setState(() {
+                          _currentClass = null;
+                          _currentAttendanceStatus =
+                              AttendanceStatus.markAttendance;
+                        });
+                      },
+                      onMarkAttendanceSet: () {
+                        setState(() {
+                          _currentClass = studentClasses.isNotEmpty
+                              ? studentClasses.first
+                              : null;
+                          _currentAttendanceStatus =
+                              AttendanceStatus.markAttendance;
+                        });
+                      },
+                    ),
                   const SizedBox(height: kSectionSpacing),
                 ],
               ),

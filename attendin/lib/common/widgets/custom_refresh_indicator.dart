@@ -97,10 +97,12 @@ class _CustomRefreshIndicatorState extends State<CustomRefreshIndicator>
       if (_dragOffset >= widget.refreshTriggerPullDistance) {
         _triggerRefresh();
       } else {
-        setState(() {
-          _dragOffset = 0.0;
-          _state = _RefreshState.idle;
-        });
+        if (!mounted) {
+          setState(() {
+            _dragOffset = 0.0;
+            _state = _RefreshState.idle;
+          });
+        }
       }
     }
     return false;
