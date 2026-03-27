@@ -159,8 +159,57 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
     }
   }
 
-  // --- MANUAL TOGGLE UI ---
   Widget _buildManualToggle(BuildContext context, AppColorScheme colors) {
+    final now = DateTime.now();
+    final end = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.sessionInfo!.endTime.hour,
+      widget.sessionInfo!.endTime.minute,
+    );
+    final classEnded = now.isAfter(end);
+
+    // If class ended and window is still open, close it
+    if (classEnded && widget.sessionInfo!.isManualWindowOpen) {
+      // Only call once per build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (widget.onManualToggle != null) {
+          widget.onManualToggle!(false);
+        }
+      });
+    }
+
+    if (classEnded) {
+      // Show "Class ended" chip
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: colors.errorRed.withAlpha(26),
+            borderRadius: BorderRadius.circular(999.0),
+            border: Border.all(color: colors.errorRed, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.timer_off, size: 16, color: colors.errorRed),
+              const SizedBox(width: 5),
+              Text(
+                'Class ended',
+                style: AppTextStyles.fieldtext(context).copyWith(
+                  color: colors.errorRed,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Otherwise, show the normal toggle
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -176,12 +225,10 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
           ),
         ),
         Switch(
-          value: widget
-              .sessionInfo!.isManualWindowOpen, // Read from our local state
+          value: widget.sessionInfo!.isManualWindowOpen,
           activeColor: colors.accentGreen,
           inactiveThumbColor: colors.errorRed,
           onChanged: (bool newValue) {
-            // 2. Tell the parent DashboardScreen to update Firestore
             if (widget.onManualToggle != null) {
               widget.onManualToggle!(newValue);
             }

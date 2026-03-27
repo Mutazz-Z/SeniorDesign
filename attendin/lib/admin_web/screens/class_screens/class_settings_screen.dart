@@ -194,7 +194,7 @@ class _SelectedClassSettingsScreenState
                       attendanceWindowMinutes:
                           int.tryParse(_attendanceWindowController.text) ?? 15,
                       attendanceMode: widget.classInfo.attendanceMode,
-                      isManualWindowOpen: false,
+                      isManualWindowOpen: widget.classInfo.isManualWindowOpen,
                     );
 
                     await provider.updateClass(updatedClass);

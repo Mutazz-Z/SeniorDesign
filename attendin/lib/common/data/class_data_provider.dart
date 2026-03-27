@@ -47,6 +47,7 @@ class ClassDataProvider extends ChangeNotifier {
           isActive: data['is_active'] ?? true,
           attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           attendanceMode: data['attendanceMode'] ?? 'auto_start',
+          isManualWindowOpen: data['isManualWindowOpen'] ?? false,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -93,6 +94,7 @@ class ClassDataProvider extends ChangeNotifier {
           isActive: data['is_active'] ?? true,
           attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
           attendanceMode: data['attendanceMode'] ?? 'auto_start',
+          isManualWindowOpen: data['isManualWindowOpen'] ?? false,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
