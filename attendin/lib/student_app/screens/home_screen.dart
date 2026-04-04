@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ClassInfo? _currentClass;
   Timer? _timer;
 
-  bool _mockUserInLocation = false;
+  bool _mockUserInLocation = true; //
 
   StreamSubscription<DocumentSnapshot>? _classSubscription;
   String? _listenedClassId;

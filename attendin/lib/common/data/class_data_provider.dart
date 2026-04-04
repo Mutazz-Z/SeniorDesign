@@ -6,6 +6,29 @@ class ClassDataProvider extends ChangeNotifier {
   List<ClassInfo> classes = [];
   bool loading = false;
 
+  // --- NEW: Location Cache Variables ---
+  List<String> availableBuildingIds = [];
+  bool hasFetchedBuildings = false;
+
+  // --- NEW: Smart Fetch Method for Buildings ---
+  Future<void> fetchBuildings({bool forceRefresh = false}) async {
+    // If we already have them and don't need a hard refresh, stop!
+    if (hasFetchedBuildings && !forceRefresh) {
+      return;
+    }
+    print("Fetched buildings from Firebase");
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('location').get();
+      availableBuildingIds = snapshot.docs.map((doc) => doc.id).toList();
+      hasFetchedBuildings = true; // Mark cache as full
+      notifyListeners();
+    } catch (e) {
+      print("Error fetching buildings: $e");
+    }
+  }
+
   Future<void> fetchClassesByIds(List<String> classIds) async {
     if (classIds.isEmpty) {
       classes = [];
@@ -110,8 +133,6 @@ class ClassDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // class_data_provider.dart
-
   // ADD NEW CLASS
   Future<void> addClass(ClassInfo newClass) async {
     loading = true;
@@ -141,6 +162,8 @@ class ClassDataProvider extends ChangeNotifier {
         'is_sat': days.contains(DateTime.saturday),
         'is_sun': days.contains(DateTime.sunday),
         'attendanceWindowMinutes': newClass.attendanceWindowMinutes,
+        'attendanceMode': newClass.attendanceMode,
+        'isManualWindowOpen': newClass.isManualWindowOpen,
       });
 
       // Refresh the list immediately
@@ -245,6 +268,8 @@ class ClassDataProvider extends ChangeNotifier {
 
   void clearData() {
     classes = [];
+    availableBuildingIds = []; // Reset location cache
+    hasFetchedBuildings = false; // Reset fetch flag
     loading = false;
     notifyListeners();
   }
