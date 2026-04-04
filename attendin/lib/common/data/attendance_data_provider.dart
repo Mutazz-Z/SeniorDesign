@@ -63,7 +63,7 @@ class AttendanceProvider extends ChangeNotifier {
 
     // 2. Fetch from Firestore (Last 30 days)
     final now = DateTime.now();
-    final start = now.subtract(const Duration(days: 30));
+    final start = now.subtract(const Duration(days: 120));
     final end = now.add(const Duration(days: 1));
 
     // Simple date formatting to match Firestore strings

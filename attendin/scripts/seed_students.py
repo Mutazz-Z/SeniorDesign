@@ -2,13 +2,27 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 # --- CONFIGURATION ---
+
+PROFILE_PICTURES = [
+    "https://images.pexels.com/photos/18699972/pexels-photo-18699972.jpeg",
+    "https://images.pexels.com/photos/13314726/pexels-photo-13314726.jpeg",
+    "https://images.pexels.com/photos/5450982/pexels-photo-5450982.jpeg",
+    "https://images.pexels.com/photos/12871451/pexels-photo-12871451.jpeg",
+    "https://images.pexels.com/photos/32083359/pexels-photo-32083359.jpeg",
+    "https://images.pexels.com/photos/769772/pexels-photo-769772.jpeg",
+    "https://images.pexels.com/photos/5871970/pexels-photo-5871970.jpeg",
+    "https://images.pexels.com/photos/17059392/pexels-photo-17059392.jpeg",
+    "https://images.pexels.com/photos/13314725/pexels-photo-13314725.jpeg",
+    "https://images.pexels.com/photos/12154467/pexels-photo-12154467.jpeg",
+]
+
 # PASTE YOUR ACTUAL CLASS ID HERE!
 CLASS_ID = "cs_senior_design_001" 
 START_ID = 100
 COUNT = 30
 # ---------------------
 
-cred = credentials.Certificate("/../../Code_Blooded/attendin/scripts/serviceAccountKey.json")
+cred = credentials.Certificate("scripts/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -19,6 +33,8 @@ def seed_database():
     for i in range(COUNT):
         # We use string IDs "100", "101"...
         uid = str(START_ID + i) 
+
+        profile_pic = PROFILE_PICTURES[i % len(PROFILE_PICTURES)]
         
         # 1. Create User (Matches user_data_provider.dart)
         user_ref = db.collection('users').document(uid)
@@ -27,7 +43,7 @@ def seed_database():
             'email': f"student{uid}@demo.com",
             'role': 'student',
             'schoolId': f"{uid}",
-            'profilePicture': "",
+            'profilePicture': profile_pic,
         }
         batch.set(user_ref, user_data)
 

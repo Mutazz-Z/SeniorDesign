@@ -8,7 +8,7 @@ START_ID = 100
 COUNT = 30
 # ---------------------------------------------------
 
-cred = credentials.Certificate("/../../Code_Blooded/attendin/scripts/serviceAccountKey.json")
+cred = credentials.Certificate("scripts/serviceAccountKey.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
