@@ -2,13 +2,11 @@ import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:attendin/student_app/widgets/custom_bottom_nav_bar.dart';
-import 'package:attendin/common/widgets/custom_refresh_indicator.dart';
 import 'package:attendin/common/widgets/expanded_calendar_widget.dart';
 import 'package:attendin/common/widgets/class_attendance_card.dart';
 import 'package:attendin/common/theme/theme_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:attendin/common/data/user_data_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter/material.dart';
@@ -59,14 +57,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     return result;
   }
 
-  // NEW: Refresh handler
-  Future<void> _handleRefresh() async {
-    setState(() {
-      _attendanceDaysFuture = fetchAttendanceDays();
-    });
-    await _attendanceDaysFuture;
-  }
-
   void _handleBottomNavItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -81,138 +71,210 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     return Scaffold(
       backgroundColor: colors.secondaryBackground,
       extendBodyBehindAppBar: false,
-      body: CustomRefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: FutureBuilder<Map<String, List<DateTime>>>(
-          future: _attendanceDaysFuture,
-          builder: (context, snapshot) {
-            // 1. LOADING STATE
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              final themeProvider =
-                  Provider.of<ThemeProvider>(context, listen: false);
-              final bool isDarkMode = themeProvider.themeMode ==
-                      ThemeMode.system
-                  ? MediaQuery.of(context).platformBrightness == Brightness.dark
-                  : themeProvider.themeMode == ThemeMode.dark;
+      body: FutureBuilder<Map<String, List<DateTime>>>(
+        future: _attendanceDaysFuture,
+        builder: (context, snapshot) {
+          // 1. LOADING STATE
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            final themeProvider =
+                Provider.of<ThemeProvider>(context, listen: false);
+            final bool isDarkMode = themeProvider.themeMode == ThemeMode.system
+                ? MediaQuery.of(context).platformBrightness == Brightness.dark
+                : themeProvider.themeMode == ThemeMode.dark;
 
-              final String logoPath = isDarkMode
-                  ? 'assets/WelcomeLogo_Dark.png'
-                  : 'assets/WelcomeLogo_Light.png';
+            final String logoPath = isDarkMode
+                ? 'assets/WelcomeLogo_Dark.png'
+                : 'assets/WelcomeLogo_Light.png';
 
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: FractionallySizedBox(
-                        widthFactor: 0.5,
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: Image.asset(logoPath, fit: BoxFit.contain),
-                        ),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: FractionallySizedBox(
+                      widthFactor: 0.5,
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: Image.asset(logoPath, fit: BoxFit.contain),
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    const CircularProgressIndicator(),
-                  ],
-                ),
-              );
-            }
-
-            // 2. ERROR STATE
-            if (snapshot.hasError) {
-              return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(
-                    parent: AlwaysScrollableScrollPhysics()),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height - 200,
-                  child: const Center(
-                      child: Text('Error loading attendance data')),
-                ),
-              );
-            }
-
-            // 3. SUCCESS STATE
-            final attendanceDays =
-                snapshot.data ?? {'absent': [], 'present': [], 'excused': []};
-            final missedCount = attendanceDays['absent']?.length ?? 0;
-            final presentDays = attendanceDays['present'] ?? [];
-            final excusedDays = attendanceDays['excused'] ?? [];
-            final missedDays = attendanceDays['absent'] ?? [];
-
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(
-                  parent: AlwaysScrollableScrollPhysics()),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                        top: topPadding + 10, bottom: 10, left: 8, right: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.arrow_back_ios,
-                              color: colors.fieldTitleColor),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                        Text('Info', style: AppTextStyles.screentitle(context)),
-                        const SizedBox(
-                            width: 48, height: 48), // Balance for centering
-                      ],
-                    ),
                   ),
-
-                  // --- CONTENT ---
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      children: [
-                        ClassCard(
-                          currentClass: widget.classInfo,
-                          showAttendanceActions: false,
-                        ),
-                        const SizedBox(height: 30),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: colors.errorRed,
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(51),
-                                spreadRadius: 1,
-                                blurRadius: 3,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 15),
-                          child: Text(
-                            'Classes Missed: $missedCount',
-                            style: AppTextStyles.button(context).copyWith(
-                              color: Colors.white,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 30),
-                        ClassCalendar(
-                          classInfo: widget.classInfo,
-                          missedDays: missedDays,
-                          presentDays: presentDays,
-                          excusedDays: excusedDays,
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
+                  const SizedBox(height: 32),
+                  const CircularProgressIndicator(),
                 ],
               ),
             );
-          },
-        ),
+          }
+
+          // 2. ERROR STATE
+          if (snapshot.hasError) {
+            return SingleChildScrollView(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height - 200,
+                child:
+                    const Center(child: Text('Error loading attendance data')),
+              ),
+            );
+          }
+
+          // 3. SUCCESS STATE
+          final attendanceDays =
+              snapshot.data ?? {'absent': [], 'present': [], 'excused': []};
+          final missedCount = attendanceDays['absent']?.length ?? 0;
+          final presentDays = attendanceDays['present'] ?? [];
+          final excusedDays = attendanceDays['excused'] ?? [];
+          final missedDays = attendanceDays['absent'] ?? [];
+          final int attendedSessions = presentDays.length;
+          final int missedSessions = missedDays.length;
+          final int gradedSessions = attendedSessions + missedSessions;
+          final int attendedPercentage = gradedSessions == 0
+              ? 0
+              : ((attendedSessions / gradedSessions) * 100).round();
+          final Color attendedPercentageColor =
+              getAttendanceColor(attendedPercentage, colors);
+            final Color attendedPercentageTextColor =
+              getReadableTextColor(attendedPercentageColor);
+
+          return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Padding(
+                  padding: EdgeInsets.only(
+                      top: topPadding + 10, bottom: 10, left: 8, right: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back_ios,
+                            color: colors.fieldTitleColor),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Text('Info', style: AppTextStyles.screentitle(context)),
+                      const SizedBox(
+                          width: 48, height: 48), // Balance for centering
+                    ],
+                  ),
+                ),
+
+                // --- CONTENT ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    children: [
+                      ClassCard(
+                        currentClass: widget.classInfo,
+                        showAttendanceActions: false,
+                      ),
+                      const SizedBox(height: 30),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: colors.errorRed,
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(51),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 15),
+                              child: Semantics(
+                                label: 'Classes missed',
+                                value: '$missedCount',
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.event_busy,
+                                      color: Colors.white,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '$missedCount',
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          AppTextStyles.button(context).copyWith(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: attendedPercentageColor,
+                                borderRadius: BorderRadius.circular(15),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(51),
+                                    spreadRadius: 1,
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 15),
+                              child: Semantics(
+                                label: 'Attendance percentage',
+                                value: '$attendedPercentage percent',
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: attendedPercentageTextColor,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '$attendedPercentage%',
+                                      textAlign: TextAlign.center,
+                                      style:
+                                          AppTextStyles.button(context).copyWith(
+                                        color: attendedPercentageTextColor,
+                                        fontSize: 22,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      ClassCalendar(
+                        classInfo: widget.classInfo,
+                        missedDays: missedDays,
+                        presentDays: presentDays,
+                        excusedDays: excusedDays,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
       bottomNavigationBar: CustomBottomNavBar(
         selectedIndex: _selectedIndex,

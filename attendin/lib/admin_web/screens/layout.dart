@@ -17,7 +17,11 @@ class LayoutScreen extends StatefulWidget {
   State<LayoutScreen> createState() => _LayoutScreenState();
 }
 
-class _LayoutScreenState extends State<LayoutScreen> {
+class _LayoutScreenState extends State<LayoutScreen>
+    with SingleTickerProviderStateMixin {
+  static const Duration _transitionDuration = Duration(milliseconds: 300);
+  static const Curve _transitionCurve = Curves.easeInOut;
+
   int _selectedIndex = 0;
   ClassesView _classesView = ClassesView.list;
   dynamic _selectedClassItem;
@@ -40,12 +44,19 @@ class _LayoutScreenState extends State<LayoutScreen> {
   late List<Color> _sectionBackgroundColors;
   bool _didInitSectionColors = false;
 
+  late final AnimationController _transitionController;
+  Animation<Color?>? _navColorAnimation;
+  Animation<Color?>? _textColorAnimation;
+  Color? _lastResolvedNavColor;
+  Color? _lastResolvedTextColor;
+
   void _handleClassSelected(dynamic classItem) {
     setState(() {
       _selectedClassItem = classItem;
       _classesView = ClassesView.details;
       _colorOverride = null;
     });
+    _animateThemeColors();
   }
 
   void _handleNavigateToSettings() {
@@ -54,6 +65,7 @@ class _LayoutScreenState extends State<LayoutScreen> {
       _classesView = ClassesView.settings;
       _colorOverride = colors.accentYellow;
     });
+    _animateThemeColors();
   }
 
   void _handleClassesBack() {
@@ -68,6 +80,7 @@ class _LayoutScreenState extends State<LayoutScreen> {
         _colorOverride = null;
       }
     });
+    _animateThemeColors();
   }
 
   void _handleClassesSave(ClassInfo updatedClass) {
@@ -76,6 +89,7 @@ class _LayoutScreenState extends State<LayoutScreen> {
       _classesView = ClassesView.details;
       _colorOverride = null;
     });
+    _animateThemeColors();
   }
 
   void _handleNavigateToAddClass() {
@@ -83,29 +97,45 @@ class _LayoutScreenState extends State<LayoutScreen> {
       _classesView = ClassesView.add;
       _colorOverride = null;
     });
+    _animateThemeColors();
   }
 
   @override
   void initState() {
     super.initState();
+    _transitionController =
+        AnimationController(vsync: this, duration: _transitionDuration)
+          ..addListener(() {
+            if (mounted) setState(() {});
+          });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final AppColorScheme colors = AppColors.of(context);
+    _sectionBackgroundColors = [
+      colors.primaryBlue,
+      colors.accentTeal,
+      colors.errorRed,
+    ];
+
+    final targets = _resolveTargetColors(colors);
     if (!_didInitSectionColors) {
-      final AppColorScheme colors = AppColors.of(context);
-      _sectionBackgroundColors = [
-        colors.primaryBlue,
-        colors.accentTeal,
-        colors.errorRed,
-      ];
       _didInitSectionColors = true;
+      _lastResolvedNavColor = targets.navColor;
+      _lastResolvedTextColor = targets.textColor;
+      _navColorAnimation = AlwaysStoppedAnimation(targets.navColor);
+      _textColorAnimation = AlwaysStoppedAnimation(targets.textColor);
+      return;
     }
+
+    _animateThemeColors();
   }
 
   @override
   void dispose() {
+    _transitionController.dispose();
     super.dispose();
   }
 
@@ -118,6 +148,54 @@ class _LayoutScreenState extends State<LayoutScreen> {
         _selectedClassItem = null;
       }
     });
+    _animateThemeColors();
+  }
+
+  ({Color navColor, Color textColor}) _resolveTargetColors(
+      AppColorScheme colors) {
+    final Color navColor =
+        _colorOverride ?? _sectionBackgroundColors[_selectedIndex];
+    final Color textColor =
+        _colorOverride != null ? Colors.black : colors.whiteColor;
+    return (navColor: navColor, textColor: textColor);
+  }
+
+  void _animateThemeColors() {
+    if (!_didInitSectionColors || !mounted) return;
+
+    final targets = _resolveTargetColors(AppColors.of(context));
+    final Color currentNav =
+        _navColorAnimation?.value ?? _lastResolvedNavColor ?? targets.navColor;
+    final Color currentText = _textColorAnimation?.value ??
+        _lastResolvedTextColor ??
+        targets.textColor;
+
+    if (currentNav == targets.navColor && currentText == targets.textColor) {
+      return;
+    }
+
+    _lastResolvedNavColor = targets.navColor;
+    _lastResolvedTextColor = targets.textColor;
+
+    final Animation<double> curved = CurvedAnimation(
+      parent: _transitionController,
+      curve: _transitionCurve,
+    );
+
+    _navColorAnimation = ColorTween(
+      begin: currentNav,
+      end: targets.navColor,
+    ).animate(curved);
+
+    _textColorAnimation = ColorTween(
+      begin: currentText,
+      end: targets.textColor,
+    ).animate(curved);
+
+    _transitionController
+      ..stop()
+      ..reset()
+      ..forward();
   }
 
   @override
@@ -129,10 +207,11 @@ class _LayoutScreenState extends State<LayoutScreen> {
     assert(_didInitSectionColors,
         '_sectionBackgroundColors must be initialized before build.');
 
+    final fallbackTargets = _resolveTargetColors(colors);
     final Color currentTextColor =
-        _colorOverride != null ? Colors.black : colors.whiteColor;
+        _textColorAnimation?.value ?? fallbackTargets.textColor;
     final Color currentNavColor =
-        _colorOverride ?? _sectionBackgroundColors[_selectedIndex];
+        _navColorAnimation?.value ?? fallbackTargets.navColor;
 
     final List<Widget> pages = [
       DashboardScreen(isSmallScreen: isSmallScreen),
@@ -222,8 +301,7 @@ class _LayoutScreenState extends State<LayoutScreen> {
             ),
             Expanded(
               flex: 4,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+              child: Container(
                 color: currentNavColor,
                 child: Center(
                   child: ConstrainedBox(

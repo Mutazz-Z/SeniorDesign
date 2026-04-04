@@ -31,8 +31,7 @@ class Sidebar extends StatelessWidget {
     final AppColorScheme colors = AppColors.of(context);
     final userProvider = Provider.of<UserDataProvider>(context);
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+    return Container(
       width: fixedWidth,
       color: sidebarBackgroundColor,
       child: Padding(
