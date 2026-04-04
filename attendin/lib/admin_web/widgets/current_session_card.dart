@@ -239,6 +239,7 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
   }
 
 // --- AUTOMATIC TIMER UI ---
+// --- AUTOMATIC TIMER UI ---
   Widget _buildTimerChip(
       BuildContext context, AppColorScheme colors, String mode) {
     Color chipColor;
@@ -246,60 +247,104 @@ class _CurrentSessionCardState extends State<CurrentSessionCard> {
     String message;
     IconData icon;
 
+    final now = DateTime.now();
+    final start = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.sessionInfo!.startTime.hour,
+      widget.sessionInfo!.startTime.minute,
+    );
+    final end = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      widget.sessionInfo!.endTime.hour,
+      widget.sessionInfo!.endTime.minute,
+    );
+    final windowDuration =
+        Duration(minutes: widget.sessionInfo!.attendanceWindowMinutes);
+
+    // Calculate all key timestamps
+    final firstWindowCloseTime = start.add(windowDuration);
+    final secondWindowOpenTime = end.subtract(windowDuration);
+
     if (mode == 'auto_start') {
-      final left = _getAutoStartTimeLeft();
-      if (left.inSeconds > 0) {
-        chipColor = colors.accentGreen.withAlpha(26);
+      final left = firstWindowCloseTime.difference(now);
+      if (now.isBefore(firstWindowCloseTime)) {
+        chipColor = colors.accentGreen.withValues(alpha: 0.1);
         iconColor = colors.accentGreen;
-        message = 'Time left: ${formatDuration(left)}';
+        message = 'Check In closes in: ${formatDuration(left)}';
         icon = Icons.timer;
       } else {
-        chipColor = colors.errorRed.withAlpha(26);
+        chipColor = colors.errorRed.withValues(alpha: 0.1);
         iconColor = colors.errorRed;
         message = 'Attendance window closed';
         icon = Icons.timer_off;
       }
     } else if (mode == 'auto_end') {
-      // Calculate the exact DateTime the class ends and the window opens
-      final now = DateTime.now();
-      final end = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        widget.sessionInfo!.endTime.hour,
-        widget.sessionInfo!.endTime.minute,
-      );
-      final openTime = end.subtract(
-          Duration(minutes: widget.sessionInfo!.attendanceWindowMinutes));
-
-      // STATE 1: Class is happening, but the window hasn't opened yet
-      if (now.isBefore(openTime)) {
-        // Convert back to TimeOfDay to use your existing formatting utility
-        final openTimeOfDay =
-            TimeOfDay(hour: openTime.hour, minute: openTime.minute);
-
-        chipColor = colors.accentGreen.withAlpha(26);
-        iconColor = colors.accentGreen;
+      if (now.isBefore(secondWindowOpenTime)) {
+        final openTimeOfDay = TimeOfDay(
+            hour: secondWindowOpenTime.hour,
+            minute: secondWindowOpenTime.minute);
+        chipColor = colors.accentYellow
+            .withValues(alpha: 0.1); // Use yellow for "Waiting"
+        iconColor = colors.accentYellow;
         message = 'Opens at ${formatTimeOfDay(openTimeOfDay)}';
         icon = Icons.schedule;
-      }
-      // STATE 2: The window is actively open
-      else if (now.isBefore(end)) {
+      } else if (now.isBefore(end)) {
         final left = end.difference(now);
-        chipColor = colors.accentGreen.withAlpha(26);
+        chipColor = colors.accentGreen.withValues(alpha: 0.1);
         iconColor = colors.accentGreen;
-        message = 'Time left: ${formatDuration(left)}';
+        message = 'Check Out closes in: ${formatDuration(left)}';
         icon = Icons.timer;
+      } else {
+        chipColor = colors.errorRed.withValues(alpha: 0.1);
+        iconColor = colors.errorRed;
+        message = 'Class ended';
+        icon = Icons.timer_off;
       }
-      // STATE 3: The class (and window) has ended
-      else {
-        chipColor = colors.errorRed.withAlpha(26);
+    }
+    // --- NEW: THE AUTO_FULL LOGIC ---
+    else if (mode == 'auto_full') {
+      if (now.isBefore(start)) {
+        // Class hasn't started yet
+        chipColor = colors.secondaryTextColor.withValues(alpha: 0.1);
+        iconColor = colors.secondaryTextColor;
+        message = 'Waiting for class to start';
+        icon = Icons.schedule;
+      } else if (now.isBefore(firstWindowCloseTime)) {
+        // STATE 1: Morning check-in window is open
+        final left = firstWindowCloseTime.difference(now);
+        chipColor = colors.accentGreen.withValues(alpha: 0.1);
+        iconColor = colors.accentGreen;
+        message = 'Check In closes in: ${formatDuration(left)}';
+        icon = Icons.timer;
+      } else if (now.isBefore(secondWindowOpenTime)) {
+        // STATE 2: Dead space in the middle of the lecture
+        final openTimeOfDay = TimeOfDay(
+            hour: secondWindowOpenTime.hour,
+            minute: secondWindowOpenTime.minute);
+        chipColor = colors.accentYellow.withValues(alpha: 0.1);
+        iconColor = colors.accentYellow;
+        message = 'Check Out opens at ${formatTimeOfDay(openTimeOfDay)}';
+        icon = Icons.schedule_outlined;
+      } else if (now.isBefore(end)) {
+        // STATE 3: Checkout window is open
+        final left = end.difference(now);
+        chipColor = colors.accentGreen.withValues(alpha: 0.1);
+        iconColor = colors.accentGreen;
+        message = 'Check Out closes in: ${formatDuration(left)}';
+        icon = Icons.timer;
+      } else {
+        // STATE 4: Class is completely over
+        chipColor = colors.errorRed.withValues(alpha: 0.1);
         iconColor = colors.errorRed;
         message = 'Class ended';
         icon = Icons.timer_off;
       }
     } else {
-      chipColor = colors.secondaryTextColor.withAlpha(26);
+      chipColor = colors.secondaryTextColor.withValues(alpha: 0.1);
       iconColor = colors.secondaryTextColor;
       message = 'Unknown mode';
       icon = Icons.help_outline;

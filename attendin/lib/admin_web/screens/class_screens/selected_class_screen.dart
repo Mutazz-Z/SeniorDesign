@@ -382,6 +382,8 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
         overrideStatus = AttendanceOverrideStatus.absent;
       } else if (status == 'excused') {
         overrideStatus = AttendanceOverrideStatus.excused;
+      } else if (status == 'pending') {
+        overrideStatus = AttendanceOverrideStatus.pending;
       }
 
       if (overrideStatus != null) {
@@ -481,8 +483,8 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
     );
     final currentMode = updatedClass.attendanceMode;
 
-    final modes = ['auto_start', 'manual', 'auto_end'];
-    final labels = ['Auto Start', 'Manual', 'Auto End'];
+    final modes = ['auto_start', 'manual', 'auto_end', 'auto_full'];
+    final labels = ['Auto Start', 'Manual', 'Auto End', 'Auto (Start & End)'];
 
     return ToggleButtons(
       isSelected: modes.map((m) => m == currentMode).toList(),

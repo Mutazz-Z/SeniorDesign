@@ -6,12 +6,15 @@ import 'package:flutter/material.dart';
 class AttendanceCard extends StatelessWidget {
   final List<ClassStudent> presentStudents;
   final List<ClassStudent> absentStudents;
+  final Set<String>
+      pendingIds; // NEW: Receives the list of half-checked-in students
   final Function(ClassStudent student, String newStatus) onStatusChange;
 
   const AttendanceCard({
     super.key,
     required this.presentStudents,
     required this.absentStudents,
+    required this.pendingIds, // NEW
     required this.onStatusChange,
   });
 
@@ -58,7 +61,8 @@ class AttendanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.secondaryTextColor.withValues(alpha: 0.3)),
+        border:
+            Border.all(color: colors.secondaryTextColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -136,9 +140,19 @@ class AttendanceCard extends StatelessWidget {
 
   Widget _buildStudentTile(
       BuildContext context, AppColorScheme colors, ClassStudent student) {
+    // --- NEW: Check if this specific student is in the pending list ---
+    final bool isPending = pendingIds.contains(student.id);
+
     return Container(
       decoration: BoxDecoration(
-        color: colors.secondaryBackground,
+        // --- NEW: Apply yellow styling if pending ---
+        color: isPending
+            ? colors.accentYellow.withValues(alpha: 0.15)
+            : colors.secondaryBackground,
+        border: isPending
+            ? Border.all(
+                color: colors.accentYellow.withValues(alpha: 0.8), width: 1.5)
+            : null,
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
@@ -164,6 +178,17 @@ class AttendanceCard extends StatelessWidget {
               fontWeight: FontWeight.w500),
           overflow: TextOverflow.ellipsis,
         ),
+        // --- NEW: Add a subtitle to explicitly state they are pending ---
+        subtitle: isPending
+            ? Text(
+                'Pending Check Out',
+                style: TextStyle(
+                  color: colors.accentYellow,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              )
+            : null,
         dense: true,
       ),
     );

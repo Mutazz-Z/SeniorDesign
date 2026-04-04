@@ -95,6 +95,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isAttendanceWindowOpen(ClassInfo cls) {
     final now = DateTime.now();
+    final classStart = DateTime(
+        now.year, now.month, now.day, cls.startTime.hour, cls.startTime.minute);
     final classEnd = DateTime(
         now.year, now.month, now.day, cls.endTime.hour, cls.endTime.minute);
 
@@ -106,12 +108,46 @@ class _HomeScreenState extends State<HomeScreen> {
       final openTime =
           classEnd.subtract(Duration(minutes: cls.attendanceWindowMinutes));
       return now.isAfter(openTime) && now.isBefore(classEnd);
+    } else if (cls.attendanceMode == 'auto_full') {
+      // NEW: Math for two separate windows
+      final firstWindowEnd =
+          classStart.add(Duration(minutes: cls.attendanceWindowMinutes));
+      final secondWindowStart =
+          classEnd.subtract(Duration(minutes: cls.attendanceWindowMinutes));
+
+      final inFirstWindow =
+          now.isAfter(classStart) && now.isBefore(firstWindowEnd);
+      final inSecondWindow =
+          now.isAfter(secondWindowStart) && now.isBefore(classEnd);
+
+      return inFirstWindow || inSecondWindow;
     } else {
       // Default: auto_start
+      final end =
+          classStart.add(Duration(minutes: cls.attendanceWindowMinutes));
+      return now.isAfter(classStart) && now.isBefore(end);
+    }
+  }
+
+  bool _attendanceWindowHasPassed(ClassInfo cls) {
+    final now = DateTime.now();
+    final classEnd = DateTime(
+        now.year, now.month, now.day, cls.endTime.hour, cls.endTime.minute);
+
+    if (now.isAfter(classEnd)) return true;
+
+    if (cls.attendanceMode == 'manual' ||
+        cls.attendanceMode == 'auto_end' ||
+        cls.attendanceMode == 'auto_full') {
+      // For these modes, they always have a chance to check in at the very end of class.
+      // So the window hasn't truly "passed" until the class is completely over.
+      return false;
+    } else {
+      // For auto_start, if they miss the first 15 mins, they are out of luck.
       final start = DateTime(now.year, now.month, now.day, cls.startTime.hour,
           cls.startTime.minute);
       final end = start.add(Duration(minutes: cls.attendanceWindowMinutes));
-      return now.isAfter(start) && now.isBefore(end);
+      return now.isAfter(end);
     }
   }
 
@@ -234,6 +270,9 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           if (statusFromDb == 'present') {
             _currentAttendanceStatus = AttendanceStatus.attended;
+          } else if (statusFromDb == 'pending') {
+            // NEW: Server says they did the morning check-in!
+            _currentAttendanceStatus = AttendanceStatus.pending;
           } else if (_attendanceWindowHasPassed(detectedClass!)) {
             _currentAttendanceStatus = AttendanceStatus.missed;
           } else {
@@ -270,26 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool _isUserInLocation() {
     return _mockUserInLocation;
-  }
-
-  bool _attendanceWindowHasPassed(ClassInfo cls) {
-    final now = DateTime.now();
-    final classEnd = DateTime(
-        now.year, now.month, now.day, cls.endTime.hour, cls.endTime.minute);
-
-    // If the class is completely over for the day, the window has definitely passed.
-    if (now.isAfter(classEnd)) return true;
-
-    // If it's manual or auto_end, it hasn't passed yet because it could open later in the class.
-    if (cls.attendanceMode == 'manual' || cls.attendanceMode == 'auto_end') {
-      return false;
-    } else {
-      // For auto_start, check if the initial window expired
-      final start = DateTime(now.year, now.month, now.day, cls.startTime.hour,
-          cls.startTime.minute);
-      final end = start.add(Duration(minutes: cls.attendanceWindowMinutes));
-      return now.isAfter(end);
-    }
   }
 
   Future<void> _markAttendance() async {
@@ -362,18 +381,71 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (distance <= radius || _isUserInLocation()) {
         // --- SUCCESS: IN RANGE ---
-        setState(() {
-          _currentAttendanceStatus = AttendanceStatus.attended;
-        });
-        _confettiController.play();
 
         final now = DateTime.now();
         final dateString =
             "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-        await attendanceProvider.markPresent(
-            _currentClass!.id, userProvider.uid, dateString);
-        print("Attendance saved to database!");
+// 1. Determine which phase of class we are in
+        String targetDbStatus =
+            'present'; // Default for auto_start, auto_end, and manual
+
+        if (_currentClass!.attendanceMode == 'auto_full') {
+          final classStart = DateTime(now.year, now.month, now.day,
+              _currentClass!.startTime.hour, _currentClass!.startTime.minute);
+          final firstWindowEnd = classStart
+              .add(Duration(minutes: _currentClass!.attendanceWindowMinutes));
+
+          if (now.isBefore(firstWindowEnd)) {
+            // --- MORNING WINDOW ---
+            targetDbStatus = 'pending';
+          } else {
+            // --- AFTERNOON WINDOW ---
+            // The Bulletproof Check: Ask Firestore directly to avoid UI state bugs!
+            final realDbStatus = await attendanceProvider.checkStudentStatus(
+                _currentClass!.id, userProvider.uid, dateString);
+
+            if (realDbStatus == 'pending') {
+              // They successfully checked in this morning. Allow the check-out!
+              targetDbStatus = 'present';
+            } else {
+              // They tried to skip class and just check out at the end. Block it.
+              setState(() {
+                _currentAttendanceStatus = AttendanceStatus.missed;
+              });
+
+              ScaffoldMessenger.of(context).clearSnackBars();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                      "Check Out failed. You missed the initial Check In window."),
+                  duration: Duration(seconds: 4),
+                ),
+              );
+              return; // STOP EXECUTION!
+            }
+          }
+        }
+
+        // 2. Fire the correct string to the Database
+        // Note: You will need to add a markPending method to your AttendanceProvider
+        // that works exactly like markPresent, but sends 'pending' instead!
+        if (targetDbStatus == 'pending') {
+          await attendanceProvider.markPending(
+              _currentClass!.id, userProvider.uid, dateString);
+          setState(() {
+            _currentAttendanceStatus = AttendanceStatus.pending;
+          });
+          print("Morning Check In saved as Pending!");
+        } else {
+          await attendanceProvider.markPresent(
+              _currentClass!.id, userProvider.uid, dateString);
+          setState(() {
+            _currentAttendanceStatus = AttendanceStatus.attended;
+          });
+          _confettiController.play(); // Only fire confetti on full completion!
+          print("Full Attendance saved to database!");
+        }
       } else {
         // --- FAILURE: OUT OF RANGE ---
         setState(() {
@@ -412,6 +484,46 @@ class _HomeScreenState extends State<HomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Error: $e")),
         );
+      }
+    }
+  }
+
+  Future<void> _handleMockStatusChange(AttendanceStatus status) async {
+    // 1. Instantly update the UI so the button changes color locally
+    setState(() {
+      _currentAttendanceStatus = status;
+    });
+
+    if (_currentClass == null) return;
+
+    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+    final attendanceProvider =
+        Provider.of<AttendanceProvider>(context, listen: false);
+
+    final now = DateTime.now();
+    final dateString =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+    try {
+      // 2. Route the mock status to your REAL Firestore database provider!
+      if (status == AttendanceStatus.attended) {
+        await attendanceProvider.markPresent(
+            _currentClass!.id, userProvider.uid, dateString);
+        _confettiController.play();
+      } else if (status == AttendanceStatus.pending) {
+        await attendanceProvider.markPending(
+            _currentClass!.id, userProvider.uid, dateString);
+      } else if (status == AttendanceStatus.missed) {
+        // Change 'markAbsent' to whatever you named your absent method in the provider
+        await attendanceProvider.markAbsent(
+            _currentClass!.id, userProvider.uid, dateString);
+      }
+    } catch (e) {
+      print("Mock DB Update Failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Mock update failed: $e")));
       }
     }
   }
@@ -541,9 +653,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (true) // For removing the mock controls easily
                     MockAttendanceControls(
                       onStatusChanged: (status) {
-                        setState(() {
-                          _currentAttendanceStatus = status;
-                        });
+                        _handleMockStatusChange(status);
                       },
                       onToggleLocation: () {
                         setState(() {
@@ -560,9 +670,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       onMarkAttendanceSet: () {
                         setState(() {
-                          _currentClass = studentClasses.isNotEmpty
-                              ? studentClasses.first
-                              : null;
+                          if (_currentClass == null &&
+                              studentClasses.isNotEmpty) {
+                            _currentClass = studentClasses.first;
+                          }
                           _currentAttendanceStatus =
                               AttendanceStatus.markAttendance;
                         });

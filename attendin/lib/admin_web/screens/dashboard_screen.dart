@@ -251,13 +251,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               stream: _attendanceStream,
                               builder: (context, snapshot) {
                                 Set<String> presentIds = {};
+                                Set<String> pendingIds = {};
+
                                 if (snapshot.hasData && snapshot.data != null) {
                                   for (var doc in snapshot.data!.docs) {
                                     final data =
                                         doc.data() as Map<String, dynamic>;
-                                    if (data['status'] == 'present' &&
-                                        data.containsKey('studentUid')) {
-                                      presentIds.add(data['studentUid']);
+                                    if (data.containsKey('studentUid')) {
+                                      if (data['status'] == 'present') {
+                                        presentIds.add(data['studentUid']);
+                                      } else if (data['status'] == 'pending') {
+                                        pendingIds.add(data[
+                                            'studentUid']); // Catch the halfway students
+                                      }
                                     }
                                   }
                                 }
@@ -267,9 +273,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                                 for (var student in _enrolledStudents) {
                                   if (presentIds.contains(student.id)) {
-                                    presentList.add(student);
+                                    presentList.add(student); // Fully completed
                                   } else {
-                                    absentList.add(student);
+                                    absentList.add(
+                                        student); // Pending and Absent both go here!
                                   }
                                 }
 
@@ -290,6 +297,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       child: AttendanceCard(
                                           presentStudents: presentList,
                                           absentStudents: absentList,
+                                          pendingIds: pendingIds,
                                           onStatusChange:
                                               _updateAttendanceStatus),
                                     ),

@@ -131,6 +131,23 @@ class AttendanceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> markPending(
+      String classId, String studentUid, String date) async {
+    final String recordId = "${classId}_${studentUid}_$date";
+
+    await FirebaseFirestore.instance
+        .collection('attendance')
+        .doc(recordId)
+        .set({
+      'classId': classId,
+      'studentUid': studentUid,
+      'date': date,
+      'status': 'pending',
+    });
+    updateHistoryCache(classId, studentUid, date, 'pending');
+    notifyListeners();
+  }
+
   Future<void> markAbsent(
       String classId, String studentUid, String date) async {
     final String recordId = "${classId}_${studentUid}_$date";

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 enum AttendanceStatus {
   markAttendance,
   marking,
+  pending,
   attended,
   missed,
   outOfLocation,
@@ -13,6 +14,7 @@ enum AttendanceOverrideStatus {
   attended,
   absent,
   excused,
+  pending,
 }
 
 class ClassInfo {
