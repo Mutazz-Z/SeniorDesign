@@ -451,7 +451,7 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                   ],
                 ),
               ),
-              if (isOutsideScheduleWindow)
+              if (classesForDay.isEmpty)
                 Positioned.fill(
                   child: AbsorbPointer(
                     child: ClipRRect(

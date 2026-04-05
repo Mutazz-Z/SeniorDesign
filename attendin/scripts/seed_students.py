@@ -19,7 +19,7 @@ PROFILE_PICTURES = [
 # PASTE YOUR ACTUAL CLASS ID HERE!
 CLASS_ID = "cs_senior_design_001" 
 START_ID = 100
-COUNT = 30
+COUNT = 10
 # ---------------------
 
 cred = credentials.Certificate("scripts/serviceAccountKey.json")
