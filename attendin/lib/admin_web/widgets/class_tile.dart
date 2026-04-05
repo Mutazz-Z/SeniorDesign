@@ -66,7 +66,7 @@ class ClassTile extends StatelessWidget {
       ),
       padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _buildPercentageCircle(context, attendancePercentage, progressColor),
           const SizedBox(width: 15),

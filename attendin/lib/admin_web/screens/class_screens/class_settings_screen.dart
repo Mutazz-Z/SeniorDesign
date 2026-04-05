@@ -1,4 +1,5 @@
 import 'package:attendin/admin_web/widgets/day_selector.dart';
+import 'package:attendin/admin_web/widgets/attendance_methods.dart';
 import 'package:attendin/common/models/class_info.dart';
 import 'package:attendin/common/widgets/labeled_input_field.dart';
 import 'package:attendin/common/widgets/primary_button.dart';
@@ -7,7 +8,6 @@ import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 import 'package:provider/provider.dart';
 import 'package:attendin/common/data/class_data_provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
 
@@ -137,6 +137,12 @@ class _SelectedClassSettingsScreenState
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final classProvider = Provider.of<ClassDataProvider>(context);
+    final updatedClass = classProvider.classes.firstWhere(
+      (c) => c.id == widget.classInfo.id,
+      orElse: () => widget.classInfo,
+    );
+    final isManualMode = updatedClass.attendanceMode == 'manual';
     return Padding(
       padding: const EdgeInsets.all(32.0),
       child: Column(
@@ -322,10 +328,16 @@ class _SelectedClassSettingsScreenState
                   ],
                 ),
                 const SizedBox(height: 24),
+                AttendanceModeToggle(
+                  classInfo: widget.classInfo,
+                  showLabel: true,
+                ),
+                const SizedBox(height: 24),
                 LabeledInputField(
                   label: 'Attendance Window (minutes):',
                   controller: _attendanceWindowController,
                   keyboardType: TextInputType.number,
+                  enabled: !isManualMode,
                 ),
                 const SizedBox(height: 40),
 
@@ -355,6 +367,10 @@ class _SelectedClassSettingsScreenState
                             final provider = Provider.of<ClassDataProvider>(
                                 context,
                                 listen: false);
+                            final latestClass = provider.classes.firstWhere(
+                              (c) => c.id == widget.classInfo.id,
+                              orElse: () => widget.classInfo,
+                            );
 
                             // Combine the formatted building name and room number for the UI string
                             final buildingName =
@@ -377,9 +393,9 @@ class _SelectedClassSettingsScreenState
                               attendanceWindowMinutes: int.tryParse(
                                       _attendanceWindowController.text) ??
                                   15,
-                              attendanceMode: widget.classInfo.attendanceMode,
-                              isManualWindowOpen:
-                                  widget.classInfo.isManualWindowOpen,
+                                attendanceMode: latestClass.attendanceMode,
+                                isManualWindowOpen:
+                                  latestClass.isManualWindowOpen,
                             );
 
                             await provider.updateClass(updatedClass);
