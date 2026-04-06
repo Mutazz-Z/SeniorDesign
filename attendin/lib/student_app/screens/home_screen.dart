@@ -239,10 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // 2. Instantly update the UI status if the teacher closes the window
               if (_currentAttendanceStatus != AttendanceStatus.attended) {
-                // Notice we are using _currentClass! here, NOT detectedClass!
                 if (_attendanceWindowHasPassed(_currentClass!)) {
                   _currentAttendanceStatus = AttendanceStatus.missed;
-                } else {
+                } else if (_currentAttendanceStatus ==
+                    AttendanceStatus.missed) {
+                  // If window reopens, allow marking again
                   _currentAttendanceStatus = AttendanceStatus.markAttendance;
                 }
               }

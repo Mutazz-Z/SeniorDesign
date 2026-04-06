@@ -12,8 +12,21 @@ PROFILE_PICTURES = [
     "https://images.pexels.com/photos/769772/pexels-photo-769772.jpeg",
     "https://images.pexels.com/photos/5871970/pexels-photo-5871970.jpeg",
     "https://images.pexels.com/photos/17059392/pexels-photo-17059392.jpeg",
-    "https://images.pexels.com/photos/13314725/pexels-photo-13314725.jpeg",
+    "https://images.pexels.com/photos/6256103/pexels-photo-6256103.jpeg",
     "https://images.pexels.com/photos/12154467/pexels-photo-12154467.jpeg",
+]
+
+NAMES = [
+    "Maximus Iquina",
+    "James Buehler",
+    "Jake Koetter",
+    "Connor Fitts",
+    "Logan Brown",
+    "John Jones",
+    "Evan Smith",
+    "Noah Sherrard",
+    "Therese Bell",
+    "Kai Dages"
 ]
 
 # PASTE YOUR ACTUAL CLASS ID HERE!
@@ -35,11 +48,12 @@ def seed_database():
         uid = str(START_ID + i) 
 
         profile_pic = PROFILE_PICTURES[i % len(PROFILE_PICTURES)]
+        name = NAMES[i % len(NAMES)]
         
         # 1. Create User (Matches user_data_provider.dart)
         user_ref = db.collection('users').document(uid)
         user_data = {
-            'name': f"Student {i+1}", 
+            'name': name, 
             'email': f"student{uid}@demo.com",
             'role': 'student',
             'schoolId': f"{uid}",
