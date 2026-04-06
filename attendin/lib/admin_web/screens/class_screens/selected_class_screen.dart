@@ -676,7 +676,7 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
             ModalButtonConfig(
               buttonColor: colors.errorRed,
               label: 'Delete',
-              onPressed: () {},
+              onPressed: () => _setClassActiveStatus(false),
             ),
           ],
         );
