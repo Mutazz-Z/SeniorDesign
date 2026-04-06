@@ -20,8 +20,12 @@ def mark_all_present():
 
     print(f"🚀 Simulating {COUNT} students marking PRESENT for {date_str}...")
 
-    for i in range(COUNT):
-        uid = str(START_ID + i)
+    # create a list of all uids and shuffle them randomly
+    uids = [str(START_ID + i) for i in range(COUNT)]
+    random.shuffle(uids)
+
+    # loop through the randomized list using enumerate to track the index
+    for index, uid in enumerate(uids):
         doc_id = f"{CLASS_ID}_{uid}_{date_str}"
         att_ref = db.collection('attendance').document(doc_id)
         
@@ -37,9 +41,9 @@ def mark_all_present():
         att_ref.set(att_data)
         print(f"   👤 Student {uid} checked in.")
 
-        # Add a random "human" delay between 0.5 and 2.5 seconds
-        if i < COUNT - 1: # Skip delay after the last student
-            delay = random.uniform(0.5, 1.5)
+        # Add a random "human" delay between 0.5 and 1.5 seconds
+        if index < COUNT - 1: # Skip delay after the last student
+            delay = random.uniform(0.2, 1.5)
             time.sleep(delay)
 
     print("✅ Success! Everyone is marked PRESENT.")

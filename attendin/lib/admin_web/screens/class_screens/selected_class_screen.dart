@@ -211,13 +211,16 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
       const SnackBar(content: Text('Generating CSV...')),
     );
 
+    final sortedStudents = List<ClassStudent>.from(students)
+      ..sort((a, b) => a.schoolId.toString().compareTo(b.schoolId.toString()));
+
     final provider = Provider.of<AttendanceProvider>(context, listen: false);
 
     // 1. Gather all attendance data and find all unique dates
     Map<String, Map<String, dynamic>> allStudentRecords = {};
     Set<String> uniqueDates = {};
 
-    for (var student in students) {
+    for (var student in sortedStudents) {
       final history = await provider.fetchStudentAttendanceHistory(
           widget.classInfo.id, student.id);
       allStudentRecords[student.id] = history;
@@ -242,10 +245,9 @@ class _SelectedClassScreenState extends State<SelectedClassScreen> {
     ]);
 
     // 3. Build each Student's Row
-// 3. Build each Student's Row
     int totalClassesHeld = sortedDates.length;
 
-    for (var student in students) {
+    for (var student in sortedStudents) {
       final history = allStudentRecords[student.id] ?? {};
 
       int presentCount = 0;
