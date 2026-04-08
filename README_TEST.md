@@ -15,10 +15,12 @@ Attendin - Attendance verification app via geolocation
 6. [Final Expo Poster](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/iquinadj_EXPO.pdf)
 7. Assessments
     1. [Fall Self-Assessment](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/Individual_Capstone_Assessment.md)
-    2. [Spring Final Self-Assessment](Just self, not team)
-8. Summary of Hours and Justification()
+    2. [Spring Final Self-Assessment](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/Spring_Individual_Assessment/Self_Assessment.md)
+8. [Summary of Hours and Justification](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/SummaryOfHours.md)
 9. Summary of Expenses - There have not been any expenses for this project.
 10. Appendix
     1. [Fall Semester Progress Reports](https://github.com/Mutazz-Z/SeniorDesign/tree/main/Documentation/Progress_Reports)
     2. [User Stories](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/User_Stories.md)
     3. [ABET Concerns Essay](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/ConstraintsEssay.md)
+    4. [Link to Figma for Student Mobile App](https://www.figma.com/design/mFoy1hrhLCk290uLqfwqWI/Attendin?node-id=8-1384)
+    5. [Link to Figma for Admin Web App](https://www.figma.com/design/mFoy1hrhLCk290uLqfwqWI/Attendin?node-id=165-200&p=f)
