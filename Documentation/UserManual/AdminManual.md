@@ -49,8 +49,17 @@ To manage your courses, navigate to the Classes tab from the main menu.
 3. Schedule:
     - Tap the days of the week this class meets
     - Set the Start Time and End Time
-4. Attendance Window:
-    - Mark how long you want the attendance window to be open.
+4. Attendance Settings:
+- Attendance Method: Select the rule for how attendance will be tracked:
+    - Start of Class: Tracks attendance only at the beginning of the session.
+
+    - End of Class: Tracks attendance only at the end of the session.
+
+    - Start and End: Requires students to check in at both the beginning and the end of the session.
+
+    - Manual: Disables automatic tracking; the instructor handles all attendance manually via the dashboard.
+- Set the Window: Mark how long you want the active attendance window(s) to remain open.
+
 5. Save: Click the save button to finalize, The class will appear in your list and students can be managed.
 
 #### Editing Class Details
@@ -76,6 +85,8 @@ To view who is enrolled in your course:
 
 ## FAQ
 **Q: How does the "Current Session" detection work?** A: The dashboard automatically checks the current day and time against your class schedules. If the current time falls between a class's start and end time, it appears as the active session.
+
+**Q: Can I change the attendance method after a class has been created?** A: Yes. You can switch between Start, End, Start and End, or Manual at any time by navigating to the class, clicking the Settings button, and adjusting your preferences.
 
 **Q: Can I delete a class permanently?** A: By going to the Classes tab and clicking any specific class you can then press the red X in the top right corner to archive, unarchive, or delete a class.
 
