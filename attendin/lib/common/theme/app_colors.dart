@@ -94,11 +94,29 @@ class AppColors {
 }
 
 Color getAttendanceColor(int percentage, AppColorScheme colors) {
-  if (percentage > 70) {
-    return colors.accentGreen;
-  } else if (percentage >= 50) {
-    return colors.errorOrange;
-  } else {
-    return colors.errorRed;
+  final int clamped = percentage.clamp(0, 100);
+
+  // 0-33: red -> orange
+  if (clamped <= 33) {
+    final t = clamped / 33;
+    return Color.lerp(colors.errorRed, colors.errorOrange, t) ??
+        colors.errorRed;
   }
+
+  // 34-66: orange -> yellow
+  if (clamped <= 66) {
+    final t = (clamped - 33) / 33;
+    return Color.lerp(colors.errorOrange, colors.accentYellow, t) ??
+        colors.errorOrange;
+  }
+
+  // 67-100: yellow -> green
+  final t = (clamped - 66) / 34;
+  return Color.lerp(colors.accentYellow, colors.accentGreen, t) ??
+      colors.accentGreen;
+}
+
+Color getReadableTextColor(Color backgroundColor) {
+  final brightness = ThemeData.estimateBrightnessForColor(backgroundColor);
+  return brightness == Brightness.dark ? Colors.white : Colors.black;
 }

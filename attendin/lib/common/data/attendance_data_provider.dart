@@ -63,7 +63,7 @@ class AttendanceProvider extends ChangeNotifier {
 
     // 2. Fetch from Firestore (Last 30 days)
     final now = DateTime.now();
-    final start = now.subtract(const Duration(days: 30));
+    final start = now.subtract(const Duration(days: 120));
     final end = now.add(const Duration(days: 1));
 
     // Simple date formatting to match Firestore strings
@@ -128,6 +128,23 @@ class AttendanceProvider extends ChangeNotifier {
       'status': 'present',
     });
     updateHistoryCache(classId, studentUid, date, 'present');
+    notifyListeners();
+  }
+
+  Future<void> markPending(
+      String classId, String studentUid, String date) async {
+    final String recordId = "${classId}_${studentUid}_$date";
+
+    await FirebaseFirestore.instance
+        .collection('attendance')
+        .doc(recordId)
+        .set({
+      'classId': classId,
+      'studentUid': studentUid,
+      'date': date,
+      'status': 'pending',
+    });
+    updateHistoryCache(classId, studentUid, date, 'pending');
     notifyListeners();
   }
 

@@ -131,6 +131,7 @@ class _ClassCalendarState extends State<ClassCalendar> {
                         textColor = colors.whiteColor;
                         break;
                       case AttendanceOverrideStatus.absent:
+                      case AttendanceOverrideStatus.pending:
                         cellColor = colors.errorRed;
                         textColor = colors.whiteColor;
                         break;
@@ -161,7 +162,8 @@ class _ClassCalendarState extends State<ClassCalendar> {
                     cellColor = colors.primaryBlue;
                     textColor = colors.whiteColor;
                   } else {
-                    cellColor = colors.secondaryBackground.withValues(alpha: 0.3);
+                    cellColor =
+                        colors.secondaryBackground.withValues(alpha: 0.3);
                     textColor = colors.fieldTitleColor;
                   }
 

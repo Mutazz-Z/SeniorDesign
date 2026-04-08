@@ -13,6 +13,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:web/web.dart' as web;
+import 'dart:js_interop';
 
 class DashboardScreen extends StatefulWidget {
   final bool isSmallScreen;
@@ -30,20 +32,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // We keep track of the ID to know when to switch streams
   String _trackedSessionId = "";
 
-  Timer? _sessionCheckTimer;
   String _todayDateString = "";
   List<ClassStudent> _enrolledStudents = [];
   Stream<QuerySnapshot>? _attendanceStream;
+  JSFunction? _unloadListener;
 
   @override
   void initState() {
     super.initState();
     _updateDateString();
 
-    // Timer just forces a rebuild every minute to check time-based logic
-    _sessionCheckTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) setState(() {});
-    });
+    _unloadListener = () {
+      if (_trackedSessionId.isNotEmpty) {
+        // We fire this off and hope the browser lets it escape before dying
+        FirebaseFirestore.instance
+            .collection('classes')
+            .doc(_trackedSessionId)
+            .update({'isManualWindowOpen': false});
+      }
+    }.toJS; // .toJS translates it for the browser
+
+    // 2. Attach it to the Chrome window
+    web.window.addEventListener('unload', _unloadListener!);
 
     // Initial fetch of classes if needed
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -51,15 +61,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Provider.of<ClassDataProvider>(context, listen: false);
       final userProvider =
           Provider.of<UserDataProvider>(context, listen: false);
+      final enrollmentProvider =
+          Provider.of<EnrollmentProvider>(context, listen: false);
+
       if (classProvider.classes.isEmpty) {
         classProvider.fetchClassesForAdmin(userProvider.uid);
+      }
+
+      final now = DateTime.now();
+      final nowMinutes = now.hour * 60 + now.minute;
+      final todayWeekday = now.weekday;
+
+      // Find all classes for today that have already ended
+      final previousClassesToday = classProvider.classes.where((c) {
+        if (c.adminId != userProvider.uid) return false;
+        if (!c.isActive) return false;
+        if (!c.daysOfWeek.contains(todayWeekday)) return false;
+        final endMinutes = c.endTime.hour * 60 + c.endTime.minute;
+        return endMinutes <= nowMinutes;
+      });
+
+      for (final classInfo in previousClassesToday) {
+        enrollmentProvider.fetchStudentUidsForCurrentClass(classInfo.id);
       }
     });
   }
 
   @override
   void dispose() {
-    _sessionCheckTimer?.cancel();
+    if (_unloadListener != null) {
+      web.window.removeEventListener('unload', _unloadListener!);
+    }
+
+    if (_trackedSessionId.isNotEmpty) {
+      FirebaseFirestore.instance
+          .collection('classes')
+          .doc(_trackedSessionId)
+          .update({'isManualWindowOpen': false});
+    }
     super.dispose();
   }
 
@@ -71,35 +110,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Called only when the Class ID changes (e.g. Class A ends, Class B starts)
   void _handleSessionSwitch(ClassInfo? newSession) {
-    if (newSession?.id == _trackedSessionId) return;
+    final String newSessionId = newSession?.id ?? "";
+    if (newSessionId == _trackedSessionId) return;
 
-    _trackedSessionId = newSession!.id;
+    _trackedSessionId = newSessionId;
 
-    if (newSession != null) {
-      // 1. Create new Stream
-      _attendanceStream = FirebaseFirestore.instance
-          .collection('attendance')
-          .where('classId', isEqualTo: newSession.id)
-          .where('date', isEqualTo: _todayDateString)
-          .snapshots();
-
-      // 2. Fetch Roster
-      _fetchRoster(newSession.id);
-    } else {
+    if (newSession == null) {
       _attendanceStream = null;
       _enrolledStudents = [];
+      return;
     }
+
+    // 1. Create new Stream
+    _attendanceStream = FirebaseFirestore.instance
+        .collection('attendance')
+        .where('classId', isEqualTo: newSessionId)
+        .where('date', isEqualTo: _todayDateString)
+        .snapshots();
+
+    // 2. Fetch Roster
+    _fetchRoster(newSessionId);
   }
 
   Future<void> _fetchRoster(String classId) async {
     final enrollmentProvider =
         Provider.of<EnrollmentProvider>(context, listen: false);
     await enrollmentProvider.fetchStudentUidsForCurrentClass(classId);
-    if (mounted) {
-      setState(() {
-        _enrolledStudents = enrollmentProvider.currentClassStudents;
-      });
-    }
+    if (!mounted || classId != _trackedSessionId) return;
+
+    setState(() {
+      _enrolledStudents = enrollmentProvider.currentClassStudents;
+    });
   }
 
   Future<void> _updateAttendanceStatus(
@@ -113,6 +154,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       await attendanceProvider.markAbsent(
           _trackedSessionId, student.id, _todayDateString);
+    }
+  }
+
+  Future<void> _updateManualWindowState(String classId, bool isOpen) async {
+    final classProvider =
+        Provider.of<ClassDataProvider>(context, listen: false);
+
+    classProvider.updateManualWindowLocally(classId, isOpen);
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'isManualWindowOpen': isOpen});
+    } catch (e) {
+      classProvider.updateManualWindowLocally(classId, !isOpen);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to open attendance. Check connection.')),
+        );
+      }
     }
   }
 
@@ -135,6 +199,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (currentSession?.id != _trackedSessionId) {
       // Schedule state update to avoid "setState during build"
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         setState(() {
           _handleSessionSwitch(currentSession);
         });
@@ -145,111 +210,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, constraints) {
         final bool isSmall = widget.isSmallScreen || constraints.maxWidth < 975;
 
-        return Scaffold(
-          backgroundColor: colors.primaryBlue,
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.cardColor,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 15,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Container(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Dashboard',
-                            style: AppTextStyles.screentitle(context).copyWith(
-                                fontSize: 32, color: colors.fieldTitleColor),
-                          ),
-                          const SizedBox(height: 5),
-                          Text('Overview of your current and upcoming classes',
-                              style: AppTextStyles.plaintext(context)),
-                          const SizedBox(height: 30),
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: colors.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dashboard',
+                          style: AppTextStyles.screentitle(context).copyWith(
+                              fontSize: 32, color: colors.fieldTitleColor),
+                        ),
+                        const SizedBox(height: 5),
+                        Text('Overview of your current and upcoming classes',
+                            style: AppTextStyles.plaintext(context)),
+                        const SizedBox(height: 30),
 
-                          // UI uses 'currentSession' directly (Reactive)
-                          if (currentSession != null)
-                            Expanded(
-                              child: StreamBuilder<QuerySnapshot>(
-                                stream: _attendanceStream,
-                                builder: (context, snapshot) {
-                                  Set<String> presentIds = {};
-                                  if (snapshot.hasData &&
-                                      snapshot.data != null) {
-                                    for (var doc in snapshot.data!.docs) {
-                                      final data =
-                                          doc.data() as Map<String, dynamic>;
-                                      if (data['status'] == 'present' &&
-                                          data.containsKey('studentUid')) {
+                        // UI uses 'currentSession' directly (Reactive)
+                        if (currentSession != null)
+                          Expanded(
+                            child: StreamBuilder<QuerySnapshot>(
+                              stream: _attendanceStream,
+                              builder: (context, snapshot) {
+                                Set<String> presentIds = {};
+                                Set<String> pendingIds = {};
+
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  for (var doc in snapshot.data!.docs) {
+                                    final data =
+                                        doc.data() as Map<String, dynamic>;
+                                    if (data.containsKey('studentUid')) {
+                                      if (data['status'] == 'present') {
                                         presentIds.add(data['studentUid']);
+                                      } else if (data['status'] == 'pending') {
+                                        pendingIds.add(data[
+                                            'studentUid']); // Catch the halfway students
                                       }
                                     }
                                   }
+                                }
 
-                                  List<ClassStudent> presentList = [];
-                                  List<ClassStudent> absentList = [];
+                                List<ClassStudent> presentList = [];
+                                List<ClassStudent> absentList = [];
 
-                                  for (var student in _enrolledStudents) {
-                                    if (presentIds.contains(student.id)) {
-                                      presentList.add(student);
-                                    } else {
-                                      absentList.add(student);
-                                    }
+                                for (var student in _enrolledStudents) {
+                                  if (presentIds.contains(student.id)) {
+                                    presentList.add(student); // Fully completed
+                                  } else {
+                                    absentList.add(
+                                        student); // Pending and Absent both go here!
                                   }
+                                }
 
-                                  return Column(
-                                    children: [
-                                      CurrentSessionCard(
-                                        sessionInfo:
-                                            currentSession, // Updated Info
-                                        presentStudents: presentList.length,
-                                        totalStudents: _enrolledStudents.length,
-                                        timeLeftForAttendance:
-                                            getAttendanceWindowLeft(
-                                                currentSession, now),
-                                      ),
-                                      const SizedBox(height: 24),
-                                      Expanded(
-                                        child: AttendanceCard(
-                                            presentStudents: presentList,
-                                            absentStudents: absentList,
-                                            onStatusChange:
-                                                _updateAttendanceStatus),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            )
-                          else
-                            _buildNoClassActiveState(colors),
-                        ],
-                      ),
+                                return Column(
+                                  children: [
+                                    CurrentSessionCard(
+                                      sessionInfo:
+                                          currentSession, // Updated Info
+                                      presentStudents: presentList.length,
+                                      totalStudents: _enrolledStudents.length,
+                                      onManualToggle: (bool isOpen) {
+                                        _updateManualWindowState(
+                                            currentSession.id, isOpen);
+                                      },
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Expanded(
+                                      child: AttendanceCard(
+                                          presentStudents: presentList,
+                                          absentStudents: absentList,
+                                          pendingIds: pendingIds,
+                                          onStatusChange:
+                                              _updateAttendanceStatus),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          _buildNoClassActiveState(colors),
+                      ],
                     ),
                   ),
-                  if (!isSmall) ...[
-                    const SizedBox(width: 24),
-                    const Expanded(
-                      flex: 1,
-                      child: AdminSchedulePanel(),
-                    ),
-                  ]
-                ],
-              ),
+                ),
+                if (!isSmall) ...[
+                  const SizedBox(width: 24),
+                  const Expanded(
+                    flex: 1,
+                    child: AdminSchedulePanel(),
+                  ),
+                ]
+              ],
             ),
           ),
         );
@@ -290,16 +360,10 @@ ClassInfo? findCurrentSession(
       final nowMinutes = now.hour * 60 + now.minute;
       final startMinutes = c.startTime.hour * 60 + c.startTime.minute;
       final endMinutes = c.endTime.hour * 60 + c.endTime.minute;
+      final attendanceWindowMinutes = c.attendanceWindowMinutes;
       return nowMinutes >= startMinutes && nowMinutes < endMinutes;
     });
   } catch (e) {
     return null;
   }
-}
-
-Duration getAttendanceWindowLeft(ClassInfo session, DateTime now) {
-  final endMinutes = session.endTime.hour * 60 + session.endTime.minute;
-  final nowMinutes = now.hour * 60 + now.minute;
-  final minutesLeft = endMinutes - nowMinutes;
-  return Duration(minutes: minutesLeft > 0 ? minutesLeft : 0);
 }

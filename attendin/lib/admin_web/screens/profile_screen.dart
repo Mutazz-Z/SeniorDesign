@@ -8,6 +8,7 @@ import 'package:attendin/common/widgets/setting_tile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:convert';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -15,6 +16,8 @@ class ProfileScreen extends StatelessWidget {
   Future<void> _handleEditProfilePicture(BuildContext context) async {
     final imageService = ImageService();
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
 
     try {
       print('Opening image picker...');
@@ -27,7 +30,13 @@ class ProfileScreen extends StatelessWidget {
       }
       print('Image selected: ${imageFile.name}');
 
-      // TODO: Add image upload logic here
+      final bytes = await imageFile.readAsBytes();
+
+      // 3. Convert to Base64
+      final base64String = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      // 4. Update the provider to trigger an instant UI rebuild
+      userProvider.updateProfilePicture(base64String);
 
       scaffoldMessenger.showSnackBar(
         SnackBar(

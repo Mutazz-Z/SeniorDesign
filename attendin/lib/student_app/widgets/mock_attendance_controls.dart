@@ -42,6 +42,10 @@ class MockAttendanceControls extends StatelessWidget {
               child: const Text('Attended'),
             ),
             ElevatedButton(
+              onPressed: () => onStatusChanged(AttendanceStatus.pending),
+              child: const Text('Pending'),
+            ),
+            ElevatedButton(
               onPressed: () => onStatusChanged(AttendanceStatus.missed),
               child: const Text('Missed'),
             ),

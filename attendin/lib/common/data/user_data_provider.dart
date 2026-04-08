@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:convert';
+import 'dart:typed_data';
 
 class UserDataProvider extends ChangeNotifier {
   String uid = '';
@@ -36,6 +40,43 @@ class UserDataProvider extends ChangeNotifier {
 
     loading = false;
     notifyListeners();
+  }
+
+  Future<void> pickAndSaveProfilePictureBase64() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+
+      // 1. Open Gallery and FORCE heavy compression
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 250, // Crucial: Keeps the string small!
+        maxHeight: 250, // Crucial: Keeps the string small!
+        imageQuality: 60,
+      );
+
+      if (image == null) return;
+
+      loading = true;
+      notifyListeners();
+
+      // 2. Read the compressed image as bytes
+      Uint8List imageBytes = await image.readAsBytes();
+
+      // 3. Convert the bytes into a Base64 text string
+      String base64String = base64Encode(imageBytes);
+
+      // 4. Format it as a "Data URI" so HTML/Flutter knows it's an image
+      String dataUrl = 'data:image/jpeg;base64,$base64String';
+
+      // 5. Save the giant text string to your FREE Firestore database!
+      await updateProfilePicture(dataUrl);
+    } catch (e) {
+      print('Error during Base64 image save: $e');
+      rethrow;
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> updateProfilePicture(String newProfilePictureUrl) async {

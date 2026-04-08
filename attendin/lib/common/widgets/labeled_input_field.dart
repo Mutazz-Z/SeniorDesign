@@ -9,6 +9,7 @@ class LabeledInputField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final TextInputType keyboardType;
   final bool obscureText;
+  final bool enabled;
 
   const LabeledInputField({
     super.key,
@@ -18,6 +19,7 @@ class LabeledInputField extends StatefulWidget {
     this.onChanged,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
+    this.enabled = true,
   });
 
   @override
@@ -46,6 +48,7 @@ class _LabeledInputFieldState extends State<LabeledInputField> {
         ),
         const SizedBox(height: 8),
         TextField(
+          enabled: widget.enabled,
           controller: widget.controller,
           onChanged: widget.onChanged,
           keyboardType: widget.keyboardType,
@@ -54,7 +57,9 @@ class _LabeledInputFieldState extends State<LabeledInputField> {
             hintText: widget.hintText,
             hintStyle: const TextStyle(color: Colors.grey),
             filled: true,
-            fillColor: colors.secondaryBackground,
+            fillColor: widget.enabled
+                ? colors.secondaryBackground
+                : colors.secondaryBackground.withValues(alpha: 0.6),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none,
@@ -67,11 +72,13 @@ class _LabeledInputFieldState extends State<LabeledInputField> {
                       _isObscure ? Icons.visibility : Icons.visibility_off,
                       color: Colors.grey,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _isObscure = !_isObscure;
-                      });
-                    },
+                    onPressed: widget.enabled
+                        ? () {
+                            setState(() {
+                              _isObscure = !_isObscure;
+                            });
+                          }
+                        : null,
                   )
                 : null,
           ),

@@ -33,7 +33,7 @@ def mark_all_present():
             'classId': CLASS_ID,
             'studentUid': uid,
             'date': date_str,
-            'status': 'present',
+            'status': 'pending',
             'timestamp': firestore.SERVER_TIMESTAMP
         }
         
@@ -46,7 +46,7 @@ def mark_all_present():
             delay = random.uniform(0.2, 1.5)
             time.sleep(delay)
 
-    print("✅ Success! Everyone is marked PRESENT.")
+    print("✅ Success! Everyone is marked pending.")
 
 if __name__ == "__main__":
     mark_all_present()

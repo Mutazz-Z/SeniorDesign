@@ -6,6 +6,29 @@ class ClassDataProvider extends ChangeNotifier {
   List<ClassInfo> classes = [];
   bool loading = false;
 
+  // --- NEW: Location Cache Variables ---
+  List<String> availableBuildingIds = [];
+  bool hasFetchedBuildings = false;
+
+  // --- NEW: Smart Fetch Method for Buildings ---
+  Future<void> fetchBuildings({bool forceRefresh = false}) async {
+    // If we already have them and don't need a hard refresh, stop!
+    if (hasFetchedBuildings && !forceRefresh) {
+      return;
+    }
+    print("Fetched buildings from Firebase");
+
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('location').get();
+      availableBuildingIds = snapshot.docs.map((doc) => doc.id).toList();
+      hasFetchedBuildings = true; // Mark cache as full
+      notifyListeners();
+    } catch (e) {
+      print("Error fetching buildings: $e");
+    }
+  }
+
   Future<void> fetchClassesByIds(List<String> classIds) async {
     if (classIds.isEmpty) {
       classes = [];
@@ -28,6 +51,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
@@ -42,8 +66,13 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_wed'] ?? false) DateTime.wednesday,
             if (data['is_thu'] ?? false) DateTime.thursday,
             if (data['is_fri'] ?? false) DateTime.friday,
+            if (data['is_sat'] ?? false) DateTime.saturday,
+            if (data['is_sun'] ?? false) DateTime.sunday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
+          attendanceMode: data['attendanceMode'] ?? 'auto_start',
+          isManualWindowOpen: data['isManualWindowOpen'] ?? false,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -71,6 +100,7 @@ class ClassDataProvider extends ChangeNotifier {
           id: doc.id,
           subject: data['subject'] ?? '',
           location: data['location'] ?? '',
+          locationId: data['locationId'] ?? '',
           startTime: TimeOfDay(
             hour: (data['startTime'] ?? 0) ~/ 60,
             minute: (data['startTime'] ?? 0) % 60,
@@ -85,8 +115,13 @@ class ClassDataProvider extends ChangeNotifier {
             if (data['is_wed'] ?? false) DateTime.wednesday,
             if (data['is_thu'] ?? false) DateTime.thursday,
             if (data['is_fri'] ?? false) DateTime.friday,
+            if (data['is_sat'] ?? false) DateTime.saturday,
+            if (data['is_sun'] ?? false) DateTime.sunday,
           ],
           isActive: data['is_active'] ?? true,
+          attendanceWindowMinutes: data['attendanceWindowMinutes'] ?? 15,
+          attendanceMode: data['attendanceMode'] ?? 'auto_start',
+          isManualWindowOpen: data['isManualWindowOpen'] ?? false,
           adminId: data['adminId'] ?? '',
         );
       }).toList();
@@ -97,8 +132,6 @@ class ClassDataProvider extends ChangeNotifier {
     loading = false;
     notifyListeners();
   }
-
-  // class_data_provider.dart
 
   // ADD NEW CLASS
   Future<void> addClass(ClassInfo newClass) async {
@@ -115,6 +148,7 @@ class ClassDataProvider extends ChangeNotifier {
         'adminId': newClass.adminId,
         'subject': newClass.subject,
         'location': newClass.location,
+        'locationId': newClass.locationId,
         'startTime': newClass.startTime.hour * 60 +
             newClass.startTime.minute, // Store as minutes from midnight
         'endTime': newClass.endTime.hour * 60 + newClass.endTime.minute,
@@ -127,6 +161,9 @@ class ClassDataProvider extends ChangeNotifier {
         'is_fri': days.contains(DateTime.friday),
         'is_sat': days.contains(DateTime.saturday),
         'is_sun': days.contains(DateTime.sunday),
+        'attendanceWindowMinutes': newClass.attendanceWindowMinutes,
+        'attendanceMode': newClass.attendanceMode,
+        'isManualWindowOpen': newClass.isManualWindowOpen,
       });
 
       // Refresh the list immediately
@@ -153,6 +190,7 @@ class ClassDataProvider extends ChangeNotifier {
           .update({
         'subject': updatedClass.subject,
         'location': updatedClass.location,
+        'locationId': updatedClass.locationId,
         'startTime':
             updatedClass.startTime.hour * 60 + updatedClass.startTime.minute,
         'endTime': updatedClass.endTime.hour * 60 + updatedClass.endTime.minute,
@@ -161,6 +199,11 @@ class ClassDataProvider extends ChangeNotifier {
         'is_wed': days.contains(DateTime.wednesday),
         'is_thu': days.contains(DateTime.thursday),
         'is_fri': days.contains(DateTime.friday),
+        'is_sat': days.contains(DateTime.saturday),
+        'is_sun': days.contains(DateTime.sunday),
+        'attendanceWindowMinutes': updatedClass.attendanceWindowMinutes,
+        'attendanceMode': updatedClass.attendanceMode,
+        'isManualWindowOpen': updatedClass.isManualWindowOpen,
       });
 
       // Refresh list
@@ -173,8 +216,60 @@ class ClassDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setClassActiveStatus(String classId, bool isActive) async {
+    try {
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'is_active': isActive});
+
+      // Update local cache
+      final index = classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        final oldClass = classes[index];
+        classes[index] = oldClass.copyWith(isActive: isActive);
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating class active status: $e");
+    }
+  }
+
+  Future<void> setClassAttendanceMode(
+      String classId, String attendanceMode) async {
+    try {
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(classId)
+          .update({'attendanceMode': attendanceMode});
+
+      // Update local cache
+      final index = classes.indexWhere((c) => c.id == classId);
+      if (index != -1) {
+        final oldClass = classes[index];
+        classes[index] = oldClass.copyWith(attendanceMode: attendanceMode);
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating class attendance mode: $e");
+    }
+  }
+
+  void updateManualWindowLocally(String classId, bool isOpen) {
+    final index = classes.indexWhere((c) => c.id == classId);
+
+    if (index != -1) {
+      classes[index] = classes[index].copyWith(isManualWindowOpen: isOpen);
+      notifyListeners();
+    }
+  }
+
   void clearData() {
     classes = [];
+    availableBuildingIds = []; // Reset location cache
+    hasFetchedBuildings = false; // Reset fetch flag
     loading = false;
     notifyListeners();
   }

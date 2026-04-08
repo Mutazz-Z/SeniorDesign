@@ -1,28 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
 import 'package:attendin/common/theme/app_colors.dart';
 import 'package:attendin/common/theme/app_text_styles.dart';
 
-import 'package:flutter/material.dart';
+// Your existing enums
+enum ProfileShape { circle, roundedSquare }
 
-extension ColorUtils on Color {
-  Color withValues({double? alpha}) {
-    if (alpha != null) {
-      return withAlpha((alpha * 255).round().clamp(0, 255));
-    }
-    return this;
-  }
-}
+enum ProfileTextLocation { bottom, right }
 
-enum ProfileShape {
-  circle,
-  roundedSquare,
-}
-
-enum ProfileTextLocation {
-  bottom,
-  right,
-}
-
-class ProfilePictureWidget extends StatelessWidget {
+class ProfilePictureWidget extends StatefulWidget {
   final String? imageUrl;
   final VoidCallback? onEditPressed;
   final bool showEditBadge;
@@ -52,6 +39,41 @@ class ProfilePictureWidget extends StatelessWidget {
     this.showName = true,
   });
 
+  @override
+  State<ProfilePictureWidget> createState() => _ProfilePictureWidgetState();
+}
+
+class _ProfilePictureWidgetState extends State<ProfilePictureWidget> {
+  Uint8List? _decodedBytes;
+  String? _lastImageUrl;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAndDecodeImage();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfilePictureWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      _checkAndDecodeImage();
+    }
+  }
+
+  void _checkAndDecodeImage() {
+    if (widget.imageUrl != _lastImageUrl) {
+      _lastImageUrl = widget.imageUrl;
+      if (widget.imageUrl != null &&
+          widget.imageUrl!.startsWith('data:image')) {
+        final base64String = widget.imageUrl!.split(',').last;
+        _decodedBytes = base64Decode(base64String);
+      } else {
+        _decodedBytes = null;
+      }
+    }
+  }
+
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return '';
     List<String> nameParts = name.trim().split(RegExp(r'\s+'));
@@ -80,6 +102,66 @@ class ProfilePictureWidget extends StatelessWidget {
         : Colors.white;
   }
 
+  Widget _buildProfileImage() {
+    final bool hasImage =
+        widget.imageUrl != null && widget.imageUrl!.isNotEmpty;
+
+    if (hasImage) {
+      ImageProvider imageProvider;
+      if (_decodedBytes != null) {
+        imageProvider = MemoryImage(_decodedBytes!); // Uses the cached bytes!
+      } else {
+        imageProvider = NetworkImage(widget.imageUrl!);
+      }
+
+      if (widget.profileShape == ProfileShape.circle) {
+        return CircleAvatar(
+            radius: widget.size / 2, backgroundImage: imageProvider);
+      } else {
+        return Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20.0),
+            image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
+          ),
+        );
+      }
+    } else {
+      final initials = _getInitials(widget.name);
+      final backgroundColor = _getColorForName(widget.name);
+      final textColor = _getTextColor(backgroundColor);
+
+      final childWidget = initials.isNotEmpty
+          ? Transform.translate(
+              offset: const Offset(0, 2),
+              child: Text(initials,
+                  style: TextStyle(
+                      color: textColor,
+                      fontSize: widget.size * 0.4,
+                      fontWeight: FontWeight.bold,
+                      height: 1.0)))
+          : Icon(Icons.person, color: textColor, size: widget.size * 0.6);
+
+      if (widget.profileShape == ProfileShape.circle) {
+        return CircleAvatar(
+            radius: widget.size / 2,
+            backgroundColor: backgroundColor,
+            child: childWidget);
+      } else {
+        return Container(
+          width: widget.size,
+          height: widget.size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(20.0)),
+          child: childWidget,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppColorScheme colors = AppColors.of(context);
@@ -88,28 +170,23 @@ class ProfilePictureWidget extends StatelessWidget {
       alignment: Alignment.bottomRight,
       children: [
         _buildProfileImage(),
-        if (showEditBadge)
+        if (widget.showEditBadge)
           Positioned(
             right: 0,
             bottom: 0,
             child: GestureDetector(
-              onTap: onEditPressed,
+              onTap: widget.onEditPressed,
               child: Container(
                 decoration: BoxDecoration(
                   color: colors.cardColor,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: color ?? colors.fieldTitleColor,
-                    width: 2,
-                  ),
+                      color: widget.color ?? colors.fieldTitleColor, width: 2),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(4.0),
-                  child: Icon(
-                    Icons.edit,
-                    color: color ?? colors.fieldTitleColor,
-                    size: 24,
-                  ),
+                  child: Icon(Icons.edit,
+                      color: widget.color ?? colors.fieldTitleColor, size: 24),
                 ),
               ),
             ),
@@ -121,131 +198,49 @@ class ProfilePictureWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (showName == true)
-          Text(
-            name!,
-            style: AppTextStyles.userName(context).copyWith(
-                color: color ?? colors.fieldTitleColor, fontSize: fontSize),
-            maxLines: null,
-            overflow: TextOverflow.visible,
-          ),
-        if (email != null)
-          Padding(
-            padding: EdgeInsets.only(top: showName == true ? 5.0 : 0.0),
-            child: Text(
-              email!,
-              style: AppTextStyles.plaintext(context).copyWith(
-                color: color?.withValues(alpha: 0.5) ??
-                    colors.fieldTitleColor.withValues(alpha: 0.5),
-              ),
+        if (widget.showName == true)
+          Text(widget.name ?? '',
+              style: AppTextStyles.userName(context).copyWith(
+                  color: widget.color ?? colors.fieldTitleColor,
+                  fontSize: widget.fontSize),
               maxLines: null,
-              overflow: TextOverflow.visible,
-            ),
+              overflow: TextOverflow.visible),
+        if (widget.email != null)
+          Padding(
+            padding: EdgeInsets.only(top: widget.showName == true ? 5.0 : 0.0),
+            child: Text(widget.email!,
+                style: AppTextStyles.plaintext(context).copyWith(
+                    color: widget.color?.withOpacity(0.5) ??
+                        colors.fieldTitleColor.withOpacity(0.5)),
+                maxLines: null,
+                overflow: TextOverflow.visible),
           ),
       ],
     );
 
-    if (textLocation == ProfileTextLocation.right) {
+    if (widget.textLocation == ProfileTextLocation.right) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           profileImageWithBadge,
-          if (showName == true || email != null)
+          if (widget.showName == true || widget.email != null)
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 20.0),
-                child: textContent,
-              ),
-            ),
+                child: Padding(
+                    padding: const EdgeInsets.only(left: 20.0),
+                    child: textContent)),
         ],
       );
     } else {
       return Column(
-        crossAxisAlignment: alignment,
+        crossAxisAlignment: widget.alignment,
         children: [
           profileImageWithBadge,
-          if (showName == true || email != null)
+          if (widget.showName == true || widget.email != null)
             Padding(
-              padding: const EdgeInsets.only(top: 20.0),
-              child: textContent,
-            ),
+                padding: const EdgeInsets.only(top: 20.0), child: textContent),
         ],
       );
-    }
-  }
-
-  /// main profile image
-  Widget _buildProfileImage() {
-    final bool hasImage = imageUrl != null && imageUrl!.isNotEmpty;
-
-    if (hasImage) {
-      if (profileShape == ProfileShape.circle) {
-        return CircleAvatar(
-          radius: size / 2,
-          backgroundImage: NetworkImage(imageUrl!),
-          onBackgroundImageError: (exception, stackTrace) {
-          },
-        );
-      } else {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(20.0),
-          child: Image.network(
-            imageUrl!,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(width: size, height: size, color: Colors.grey);
-            },
-          ),
-        );
-      }
-    } else {
-      final initials = _getInitials(name);
-      final backgroundColor = _getColorForName(name);
-      final textColor = _getTextColor(backgroundColor);
-      final initialsWidget = Transform.translate(
-        offset: const Offset(0, 2),
-        child: Text(
-          initials,
-          style: TextStyle(
-            color: textColor,
-            fontSize: size * 0.4,
-            fontWeight: FontWeight.bold,
-            height: 1.0,
-          ),
-        ),
-      );
-
-      // Display a person icon if there are no initials to show
-      final placeholderWidget = Icon(
-        Icons.person,
-        color: textColor,
-        size: size * 0.6,
-      );
-
-      final childWidget =
-          initials.isNotEmpty ? initialsWidget : placeholderWidget;
-
-      if (profileShape == ProfileShape.circle) {
-        return CircleAvatar(
-          radius: size / 2,
-          backgroundColor: backgroundColor,
-          child: childWidget,
-        );
-      } else {
-        return Container(
-          width: size,
-          height: size,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: childWidget,
-        );
-      }
     }
   }
 }

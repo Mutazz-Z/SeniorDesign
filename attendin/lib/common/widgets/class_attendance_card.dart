@@ -184,12 +184,50 @@ class ClassCard extends StatelessWidget {
                 : null,
           ),
         );
+
+      // --- NEW: THE PENDING / CHECK OUT BUTTON ---
+// --- NEW: THE RE-STYLED PENDING / CHECK OUT BUTTON ---
+      case AttendanceStatus.pending:
+        return SizedBox(
+          height: 74.0,
+          width: double.infinity,
+          child: TextButton(
+            key:
+                markAttendanceButtonKey, // Keeps the confetti alignment working!
+            style: TextButton.styleFrom(
+              backgroundColor: colors.accentYellow
+                  .withValues(alpha: 0.15), // Soft, see-through background
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(
+                    30), // Matches your other status cards
+                side: BorderSide(
+                  color: colors.accentYellow
+                      .withValues(alpha: 0.8), // Solid yellow border
+                  width: 2,
+                ),
+              ),
+            ),
+            onPressed: currentClass != null && onMarkAttendancePressed != null
+                ? onMarkAttendancePressed
+                : null,
+            child: Text(
+              'Check Out',
+              style: TextStyle(
+                color: colors.accentYellow, // Yellow text to match the border
+                fontFamily: 'LeagueSpartan',
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        );
+
       case AttendanceStatus.marking:
         return SizedBox(
           height: 74.0,
           width: double.infinity,
           child: PrimaryButton(
-            label: 'Marking Attendance...',
+            label: 'Processing...',
             backgroundColor: colors.primaryBlue,
             onPressed: null,
           ),
