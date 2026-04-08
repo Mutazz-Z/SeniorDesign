@@ -9,8 +9,8 @@ Attendin - Attendance verification app via geolocation
     3. [Design Diagrams](https://github.com/Mutazz-Z/SeniorDesign/tree/main/Documentation/Design_Diagrams)
 3. [Test Plan & Results](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/Test_Plan/Test_Plan.md)
 4. User Manuals
-    1.[Student Manual](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/UserManual/UserManual.md)
-    2.[Admin Manual](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/UserManual/AdminManual.md)
+    1. [Student Manual](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/UserManual/UserManual.md)
+    2. [Admin Manual](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/UserManual/AdminManual.md)
 5. [Final PPT Presentation](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/PresentationSlidedeck.pdf)
 6. [Final Expo Poster](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/iquinadj_EXPO.pdf)
 7. Assessments
