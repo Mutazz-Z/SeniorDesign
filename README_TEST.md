@@ -21,4 +21,4 @@ Attendin - Attendance verification app via geolocation
 10. Appendix
     1. [Fall Semester Progress Reports](https://github.com/Mutazz-Z/SeniorDesign/tree/main/Documentation/Progress_Reports)
     2. [User Stories](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/User_Stories.md)
-    3.[ABET Concerns Essay](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/ConstraintsEssay.md)
+    3. [ABET Concerns Essay](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/ConstraintsEssay.md)
