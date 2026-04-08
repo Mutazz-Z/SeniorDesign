@@ -14,8 +14,8 @@ Attendin - Attendance verification app via geolocation
 5. [Final PPT Presentation](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/PresentationSlidedeck.pdf)
 6. [Final Expo Poster](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/iquinadj_EXPO.pdf)
 7. Assessments
-    1.[Fall Self-Assessment](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/Individual_Capstone_Assessment.md)
-    2.[Spring Final Self-Assessment](Just self, not team)
+    1. [Fall Self-Assessment](https://github.com/Mutazz-Z/SeniorDesign/blob/main/Documentation/HomeworkEssays/Individual_Capstone_Assessment.md)
+    2. [Spring Final Self-Assessment](Just self, not team)
 8. Summary of Hours and Justification()
 9. Summary of Expenses - There have not been any expenses for this project.
 10. Appendix
